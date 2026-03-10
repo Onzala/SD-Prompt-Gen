@@ -1,5 +1,5 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Image as ImageIcon } from 'lucide-react';
 
 interface ImageUploaderProps {
   selectedImage: string | null;
@@ -12,7 +12,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
   // Helper to read file as base64
   const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       onImageChange(reader.result as string);
@@ -50,8 +50,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
       if (e.clipboardData && e.clipboardData.files.length > 0) {
         const file = e.clipboardData.files[0];
         if (file.type.startsWith('image/')) {
-            e.preventDefault();
-            processFile(file);
+          e.preventDefault();
+          processFile(file);
         }
       }
     };
@@ -64,13 +64,13 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
   if (selectedImage) {
     return (
       <div className="relative group w-full h-24 bg-slate-800 rounded-lg border border-slate-700 overflow-hidden flex items-center justify-center">
-        <img 
-          src={selectedImage} 
-          alt="Preview" 
+        <img
+          src={selectedImage}
+          alt="Preview"
           className="h-full w-full object-contain"
         />
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button 
+          <button
             onClick={() => onImageChange(null)}
             className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full scale-75"
             title="移除圖片"
@@ -91,15 +91,15 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
         ${isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-slate-600 hover:border-slate-500 hover:bg-slate-800/50'}
       `}
     >
-      <input 
-        type="file" 
-        accept="image/*" 
+      <input
+        type="file"
+        accept="image/*"
         onChange={handleFileInput}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
       />
       <div className="flex flex-col items-center text-slate-400 pointer-events-none">
         <div className="p-1.5 bg-slate-800 rounded-full mb-1">
-            <ImageIcon size={18} />
+          <ImageIcon size={18} />
         </div>
         <p className="text-xs text-center leading-tight">
           <span className="font-semibold text-blue-400">點擊</span>/拖放/貼上圖片

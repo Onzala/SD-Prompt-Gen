@@ -1,15 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Wand2, Database, Upload, X, History as HistoryIcon, Key, Info } from 'lucide-react';
+import { Sparkles, Wand2, Database, Upload, X, History as HistoryIcon, Key, Info, Settings as SettingsIcon } from 'lucide-react';
 import { GeminiModel, HistoryItem } from './types';
 import { generateSDPrompt } from './services/geminiService';
 import ModelSelector from './components/ModelSelector';
 import ImageUploader from './components/ImageUploader';
 import OutputDisplay from './components/OutputDisplay';
 import HistorySidebar from './components/HistorySidebar';
-
-// Removed manual Window interface declaration to avoid conflict with environment's global types.
-// We will use type casting (window as any).aistudio where needed.
+import ApiKeySettings from './components/ApiKeySettings';
 
 const App: React.FC = () => {
   const [model, setModel] = useState<GeminiModel>(GeminiModel.FLASH_3);
@@ -20,22 +18,16 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
-  
+
   // History State
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   // Check for API key status on mount
   useEffect(() => {
-    const checkKey = async () => {
-      // Access aistudio via any cast to bypass type conflicts and handle injected global
-      const aistudio = (window as any).aistudio;
-      if (aistudio) {
-        const selected = await aistudio.hasSelectedApiKey();
-        setHasApiKey(selected);
-      }
-    };
-    checkKey();
+    const key = localStorage.getItem('gemini_api_key');
+    setHasApiKey(!!key);
   }, []);
 
   // Load history from local storage on mount
@@ -55,19 +47,20 @@ const App: React.FC = () => {
     localStorage.setItem('sd_prompt_history', JSON.stringify(history));
   }, [history]);
 
-  const handleSelectKey = async () => {
-    const aistudio = (window as any).aistudio;
-    if (aistudio) {
-      await aistudio.openSelectKey();
-      // Assume success after trigger as per instructions to avoid race conditions
-      setHasApiKey(true);
-    }
+  const handleApiKeySave = (key: string) => {
+    setHasApiKey(!!key);
+    setIsApiKeyModalOpen(false);
   };
 
   const handleGenerate = async () => {
+    if (!hasApiKey) {
+      setIsApiKeyModalOpen(true);
+      return;
+    }
+
     if (!inputText.trim() && !selectedImage) {
-        setError("請提供文字描述或參考圖片。");
-        return;
+      setError("請提供文字描述或參考圖片。");
+      return;
     }
 
     setLoading(true);
@@ -75,7 +68,8 @@ const App: React.FC = () => {
     setGeneratedContent('');
 
     try {
-      const result = await generateSDPrompt(inputText, selectedImage, model, tagDbContent || null);
+      const apiKey = localStorage.getItem('gemini_api_key') || undefined;
+      const result = await generateSDPrompt(inputText, selectedImage, model, tagDbContent || null, apiKey);
       setGeneratedContent(result);
 
       // Add to history
@@ -87,16 +81,15 @@ const App: React.FC = () => {
         model: model,
         hasImage: !!selectedImage
       };
-      
+
       setHistory(prev => [newItem, ...prev].slice(0, 50));
 
     } catch (err: any) {
-      // Specific error handling for missing/invalid keys
-      if (err.message && err.message.includes("Requested entity was not found")) {
-        setError("API 金鑰失效或找不到對應專案，請點擊上方金鑰按鈕重新選擇。");
+      if (err.message && (err.message.includes("401") || err.message.includes("key"))) {
+        setError("API 金鑰無效，請檢查設定。");
         setHasApiKey(false);
       } else if (err.message && err.message.includes("429")) {
-        setError("免費額度已達上限。請點擊上方金鑰按鈕切換至付費專案金鑰。");
+        setError("呼叫頻率過高或配額不足。");
       } else {
         setError(err.message || "發生未預期的錯誤。");
       }
@@ -116,7 +109,7 @@ const App: React.FC = () => {
 
   const handleClearHistory = () => {
     if (confirm("確定要清除所有歷史紀錄嗎？")) {
-        setHistory([]);
+      setHistory([]);
     }
   };
 
@@ -146,183 +139,217 @@ const App: React.FC = () => {
   };
 
   const getModelLabel = () => {
-    switch(model) {
-        case GeminiModel.FLASH_3: return "Gemini 3 Flash: 推薦首選，反應迅速且指令遵循力強。";
-        case GeminiModel.PRO_3: return "Gemini 3 Pro: 最強模型，擅長複雜構圖與精細細節描述。";
-        case GeminiModel.LITE_25: return "Gemini 2.5 Lite: 輕量高效，適合快速產生簡單標籤。";
-        default: return "";
+    switch (model) {
+      case GeminiModel.FLASH_3: return "Gemini 3 Flash: 推薦首選，反應迅速且指令遵循力強。";
+      case GeminiModel.PRO_3: return "Gemini 3 Pro: 最強模型，擅長複雜構圖與精細細節描述。";
+      case GeminiModel.LITE_25: return "Gemini 2.5 Lite: 輕量高效，適合快速產生簡單標籤。";
+      default: return "";
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col text-slate-200">
       {/* Header */}
-      <header className="bg-slate-900/50 backdrop-blur-md border-b border-slate-800 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Sparkles className="text-white w-5 h-5" />
+      <header className="glass-panel sticky top-0 z-[40] border-b-0 border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl shadow-blue-500/20 animate-float">
+              <Sparkles className="text-white w-6 h-6" />
             </div>
-            <h1 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-purple-200">
-              SD 提示詞生成器
-            </h1>
+            <div>
+              <h1 className="text-xl font-extrabold text-gradient tracking-tight">
+                SD Prompt Gen
+              </h1>
+              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Ultimate AI Helper</p>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2 sm:gap-4">
-             {/* API Key Selector Button */}
-             <button 
-                onClick={handleSelectKey}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                  hasApiKey 
-                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' 
-                    : 'border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
-                }`}
-             >
-                <Key size={14} />
-                <span className="hidden sm:inline">{hasApiKey ? '已載入金鑰' : '設定金鑰'}</span>
-             </button>
 
-             <button 
-                onClick={() => setIsHistoryOpen(true)}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all flex items-center gap-2"
-                title="歷史紀錄"
-             >
-                <HistoryIcon size={20} />
-                <span className="hidden sm:inline text-sm font-medium">紀錄</span>
-             </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsApiKeyModalOpen(true)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold transition-all duration-300 ${hasApiKey
+                ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/10'
+                : 'border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10'
+                }`}
+            >
+              <Key size={16} />
+              <span className="hidden sm:inline">{hasApiKey ? 'API 已設定' : '尚未設定 API'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsHistoryOpen(true)}
+              className="p-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10"
+              title="歷史紀錄"
+            >
+              <HistoryIcon size={22} />
+            </button>
+
+            <button
+              className="p-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10"
+              onClick={() => setIsApiKeyModalOpen(true)}
+            >
+              <SettingsIcon size={22} />
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 grid lg:grid-cols-2 gap-8">
-        
+      <main className="flex-1 max-w-7xl mx-auto w-full p-6 lg:p-10 grid lg:grid-cols-2 gap-10">
+
         {/* Left Column: Input */}
-        <div className="flex flex-col gap-6">
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">模型選擇</label>
-            <ModelSelector 
-                currentModel={model} 
-                onModelChange={setModel} 
-                disabled={loading}
-            />
-            <p className="text-[10px] text-slate-500 px-1 italic">
-                {getModelLabel()}
-            </p>
-          </div>
+        <div className="flex flex-col gap-8">
 
-          <div className="space-y-2">
-             <label className="text-sm font-medium text-slate-400">視覺參考 (選填)</label>
-             <ImageUploader 
-                selectedImage={selectedImage} 
-                onImageChange={setSelectedImage} 
-             />
-          </div>
-
-          <div className="space-y-2">
-             <div className="flex justify-between items-center px-1">
-                <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                    <Database size={14} /> 標籤資料庫 (參考)
-                </label>
-                <div className="flex items-center gap-3">
-                    <label className="text-xs text-blue-400 hover:text-blue-300 cursor-pointer flex items-center gap-1 transition-colors select-none">
-                        <input 
-                            type="file" 
-                            accept=".txt,.json,.csv,.md" 
-                            className="hidden" 
-                            onChange={handleTagDbUpload}
-                            disabled={loading}
-                        />
-                        <Upload size={12} />
-                        載入檔案
-                    </label>
-                    {tagDbContent && (
-                        <button 
-                            onClick={() => setTagDbContent('')}
-                            className="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
-                        >
-                            <X size={12} /> 清除
-                        </button>
-                    )}
-                </div>
-             </div>
-             <textarea
-                className="w-full h-24 bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all resize-y font-mono scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent"
-                placeholder="在此貼上標籤資料庫內容，AI 將會參考這些標籤..."
-                value={tagDbContent}
-                onChange={(e) => setTagDbContent(e.target.value)}
-                disabled={loading}
-             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-400">畫面描述</label>
-            <textarea
-              className="w-full h-40 bg-slate-800 border-2 border-slate-700 rounded-xl p-4 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all resize-y scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent"
-              placeholder="描述你想要生成的畫面... (例如：賽博龐克城市，霓虹燈，下雨，1個女孩，帽T...)"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">模型引擎</label>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+            <ModelSelector
+              currentModel={model}
+              onModelChange={setModel}
               disabled={loading}
             />
-            <div className="flex justify-between items-center pt-2">
-                <span className="text-xs text-slate-500">按 Ctrl + Enter 生成</span>
-                {error && <span className="text-xs text-red-400 font-medium">{error}</span>}
-            </div>
-          </div>
+            <p className="text-[11px] text-slate-500 italic px-1">
+              {getModelLabel()}
+            </p>
+          </section>
 
-          <button
-            onClick={handleGenerate}
-            disabled={loading || (!inputText && !selectedImage)}
-            className={`
-              w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]
-              ${loading || (!inputText && !selectedImage)
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/25'}
-            `}
-          >
-            {loading ? (
-              <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                <Wand2 className="w-5 h-5" />
-                生成提示詞
-              </>
-            )}
-          </button>
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">視覺參考</label>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+            <ImageUploader
+              selectedImage={selectedImage}
+              onImageChange={setSelectedImage}
+            />
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex justify-between items-center px-1">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <Database size={14} /> 標籤資料庫範本
+              </label>
+              <div className="flex items-center gap-4">
+                <label className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer flex items-center gap-1.5 transition-colors select-none">
+                  <input
+                    type="file"
+                    accept=".txt,.json,.csv,.md"
+                    className="hidden"
+                    onChange={handleTagDbUpload}
+                    disabled={loading}
+                  />
+                  <Upload size={14} />
+                  匯入檔案
+                </label>
+                {tagDbContent && (
+                  <button
+                    onClick={() => setTagDbContent('')}
+                    className="text-xs text-slate-500 hover:text-red-400 font-semibold transition-colors flex items-center gap-1.5"
+                  >
+                    <X size={14} /> 清除
+                  </button>
+                )}
+              </div>
+            </div>
+            <textarea
+              className="w-full h-28 bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-[13px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-all resize-none font-mono scrollbar-hide"
+              placeholder="貼上風格標籤或參考內容，AI 將自動對齊..."
+              value={tagDbContent}
+              onChange={(e) => setTagDbContent(e.target.value)}
+              disabled={loading}
+            />
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">畫面靈感</label>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+            <div className="relative group">
+              <textarea
+                className="w-full h-44 bg-slate-900/50 border border-white/10 rounded-2xl p-5 pb-16 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/5 transition-all resize-none scrollbar-hide text-lg"
+                placeholder="在此輸入您的想法... (例如：賽博龐克風格的貓，在霓虹燈下喝咖啡)"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={loading}
+              />
+              <div className="absolute bottom-4 right-4 flex items-center gap-3">
+                <span className="text-[10px] text-slate-500 font-bold px-2 uppercase pointer-events-none hidden sm:inline-block tracking-wider">Ctrl + Enter</span>
+                <button
+                  onClick={handleGenerate}
+                  disabled={loading || (!inputText && !selectedImage)}
+                  className={`
+                    px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all transform active:scale-95
+                    ${loading || (!inputText && !selectedImage)
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+                      : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/25'}
+                  `}
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Wand2 className="w-4 h-4" />
+                      開始魔法生成
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-400 font-medium px-1 flex items-center gap-1"><Info size={12} /> {error}</p>}
+          </section>
         </div>
 
         {/* Right Column: Output */}
-        <div className="flex flex-col h-full">
-           <div className="flex-1">
-              <label className="block text-sm font-medium text-slate-400 mb-2">生成結果</label>
+        <div className="flex flex-col h-full gap-8">
+          <div className="flex-1 flex flex-col min-h-[400px]">
+            <div className="flex items-center gap-2 px-1 mb-4">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">生成結果</label>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+            <div className="flex-1 glass-panel rounded-3xl overflow-hidden relative border border-white/10">
               <OutputDisplay content={generatedContent} loading={loading} />
-           </div>
-           
-           {/* Tips / Info */}
-           <div className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-slate-800 text-xs text-slate-500 space-y-3">
-               <div className="flex items-start gap-2 text-amber-400/80">
-                  <Info size={14} className="mt-0.5 flex-shrink-0" />
-                  <p>
-                    如果遇到配額問題，請點擊上方 <span className="text-amber-400 font-bold">設定金鑰</span> 並選擇一個有綁定付款方式的專案以解除限制。
-                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="underline ml-1 text-blue-400">了解詳情</a>
-                  </p>
-               </div>
-               <div className="space-y-1">
-                  <p className="font-semibold text-slate-400">小撇步：</p>
-                  <ul className="list-disc list-inside space-y-1">
-                      <li>提供圖片以提取風格和構圖標籤。</li>
-                      <li>如果描述非常複雜或具體，請使用 <strong>Gemini 3 Pro</strong>。</li>
-                      <li>標籤資料庫可載入您常用的風格清單，AI 會從中選取合適的。</li>
-                  </ul>
-               </div>
-           </div>
+            </div>
+          </div>
+
+          {/* Tips / Info */}
+          <div className="glass-panel p-6 rounded-2xl border border-white/5 space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 animate-pulse">
+                <Info size={18} className="text-amber-400" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-slate-200">專業生成小提醒</h4>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Gemini 3 Pro 最適合處理包含大量細節與藝術風格的長描述；若是快速調整標籤，Flash 則是高性價比的首選。
+                </p>
+              </div>
+            </div>
+            <div className="pt-4 border-t border-white/5 grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-slate-600 uppercase">私隱保護</p>
+                <p className="text-[11px] text-slate-400">金鑰僅存於本地，確保隱私安全。</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p className="text-[10px] font-bold text-slate-600 uppercase">社群支援</p>
+                <p className="text-[11px] text-slate-400">優化各種 SD 模型相容性。</p>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 
-      {/* History Sidebar */}
-      <HistorySidebar 
+      {/* Overlays */}
+      <ApiKeySettings
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        onSave={handleApiKeySave}
+      />
+
+      <HistorySidebar
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         history={history}
@@ -330,6 +357,10 @@ const App: React.FC = () => {
         onClear={handleClearHistory}
         onDelete={handleDeleteHistoryItem}
       />
+
+      <footer className="py-8 text-center border-t border-white/5">
+        <p className="text-[11px] text-slate-600 font-medium">© 2026 SD Prompt Gen. Crafted for Excellence.</p>
+      </footer>
     </div>
   );
 };
