@@ -227,39 +227,41 @@ const App: React.FC = () => {
           </section>
 
           <section className="space-y-4">
-            <div className="flex justify-between items-center px-1">
-              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <Database size={14} /> 標籤資料庫範本
-              </label>
-              <div className="flex items-center gap-4">
-                <label className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer flex items-center gap-1.5 transition-colors select-none">
-                  <input
-                    type="file"
-                    accept=".txt,.json,.csv,.md"
-                    className="hidden"
-                    onChange={handleTagDbUpload}
-                    disabled={loading}
-                  />
-                  <Upload size={14} />
-                  匯入檔案
+            <div className="flex justify-between items-center px-1 gap-4">
+              <div className="flex items-center gap-2">
+                <Database size={14} className="text-slate-400" />
+                <label className="text-sm font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                  自訂標籤庫
                 </label>
-                {tagDbContent && (
-                  <button
-                    onClick={() => setTagDbContent('')}
-                    className="text-xs text-slate-500 hover:text-red-400 font-semibold transition-colors flex items-center gap-1.5"
-                  >
-                    <X size={14} /> 清除
-                  </button>
+              </div>
+              <div className="h-px flex-1 bg-white/5" />
+              <div className="flex items-center">
+                {tagDbContent ? (
+                  <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg shadow-lg shadow-emerald-500/5">
+                    <span className="text-xs text-emerald-400 font-semibold">✅ 已載入資料</span>
+                    <button
+                      onClick={() => setTagDbContent('')}
+                      className="text-emerald-500 hover:text-red-400 transition-colors"
+                      title="清除"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer flex items-center gap-1.5 transition-colors select-none px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <input
+                      type="file"
+                      accept=".txt,.json,.csv,.md"
+                      className="hidden"
+                      onChange={handleTagDbUpload}
+                      disabled={loading}
+                    />
+                    <Upload size={14} />
+                    上傳參考檔案
+                  </label>
                 )}
               </div>
             </div>
-            <textarea
-              className="w-full h-28 bg-slate-900/50 border border-white/10 rounded-2xl p-4 text-[13px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-blue-500/40 transition-all resize-none font-mono scrollbar-hide"
-              placeholder="貼上風格標籤或參考內容，AI 將自動對齊..."
-              value={tagDbContent}
-              onChange={(e) => setTagDbContent(e.target.value)}
-              disabled={loading}
-            />
           </section>
 
           <section className="space-y-4">
