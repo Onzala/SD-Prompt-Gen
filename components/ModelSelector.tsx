@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GeminiModel } from '../types';
-import { Zap, Brain, Rocket } from 'lucide-react';
+import { Zap, Brain, Rocket, ChevronDown } from 'lucide-react';
 
 interface ModelSelectorProps {
   currentModel: GeminiModel;
@@ -8,56 +8,108 @@ interface ModelSelectorProps {
   disabled: boolean;
 }
 
+/** 模型引擎選擇器 — 下拉選單版本 */
 const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChange, disabled }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const models = [
     {
       id: GeminiModel.FLASH_3,
-      name: 'Gemini 3 Flash',
+      label: 'Flash',
+      fullName: 'Gemini 3 Flash',
       icon: <Zap size={14} />,
-      color: 'bg-blue-600',
-      activeClass: 'bg-blue-600 text-white shadow-blue-500/20',
-      description: '速度與平衡'
+      color: 'text-blue-400',
+      dotColor: 'bg-blue-500',
+      description: '推薦首選，反應迅速且指令遵循力強',
     },
     {
       id: GeminiModel.PRO_3,
-      name: 'Gemini 3 Pro',
+      label: 'Pro',
+      fullName: 'Gemini 3 Pro',
       icon: <Brain size={14} />,
-      color: 'bg-purple-600',
-      activeClass: 'bg-purple-600 text-white shadow-purple-500/20',
-      description: '最高智慧'
+      color: 'text-purple-400',
+      dotColor: 'bg-purple-500',
+      description: '最強模型，擅長複雜構圖與精細細節描述',
     },
     {
       id: GeminiModel.LITE_25,
-      name: '2.5 Lite',
+      label: 'Lite',
+      fullName: '2.5 Lite',
       icon: <Rocket size={14} />,
-      color: 'bg-emerald-600',
-      activeClass: 'bg-emerald-600 text-white shadow-emerald-500/20',
-      description: '極速輕量'
-    }
+      color: 'text-emerald-400',
+      dotColor: 'bg-emerald-500',
+      description: '輕量高效，適合快速產生簡單標籤',
+    },
   ];
 
+  const current = models.find(m => m.id === currentModel) || models[0];
+
+  // 點擊外部時關閉下拉選單
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="grid grid-cols-3 gap-2 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700">
-      {models.map((m) => (
-        <button
-          key={m.id}
-          onClick={() => onModelChange(m.id)}
-          disabled={disabled}
-          className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg text-[10px] sm:text-xs font-bold transition-all duration-300 ${
-            currentModel === m.id
-              ? `${m.activeClass} shadow-lg scale-[1.02]`
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700'
-          }`}
-        >
-          <div className="flex items-center gap-1.5">
-            {m.icon}
-            <span className="whitespace-nowrap">{m.name.split(' ').pop()}</span>
-          </div>
-          <span className={`text-[8px] font-normal opacity-70 ${currentModel === m.id ? 'text-white' : 'text-slate-500'}`}>
-            {m.description}
-          </span>
-        </button>
-      ))}
+    <div ref={dropdownRef} className="relative">
+      {/* 觸發按鈕 */}
+      <button
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`
+          flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all duration-200
+          ${isOpen
+            ? 'border-blue-500/40 bg-blue-500/10 text-white'
+            : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+      >
+        <span className={`flex items-center gap-1.5 ${current.color}`}>
+          {current.icon}
+          <span className="text-slate-200 font-bold">{current.fullName}</span>
+        </span>
+        <ChevronDown
+          size={14}
+          className={`text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* 下拉選單 */}
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-2 w-72 glass-panel rounded-xl border border-white/10 shadow-2xl shadow-black/40 z-50 overflow-hidden animate-crop-modal-in">
+          {models.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => {
+                onModelChange(m.id);
+                setIsOpen(false);
+              }}
+              className={`
+                w-full flex items-start gap-3 px-4 py-3 text-left transition-all duration-150
+                ${currentModel === m.id
+                  ? 'bg-white/10'
+                  : 'hover:bg-white/5'}
+              `}
+            >
+              {/* 狀態指示點 */}
+              <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${currentModel === m.id ? m.dotColor : 'bg-slate-600'}`} />
+              <div className="flex-1 min-w-0">
+                <div className={`flex items-center gap-1.5 text-sm font-bold ${currentModel === m.id ? 'text-white' : 'text-slate-300'}`}>
+                  {m.icon}
+                  {m.fullName}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{m.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Wand2, Database, Upload, X, History as HistoryIcon, Key, Info, Settings as SettingsIcon } from 'lucide-react';
+import { Sparkles, Wand2, Database, X, History as HistoryIcon, Key, Info, Settings as SettingsIcon } from 'lucide-react';
 import { GeminiModel, HistoryItem } from './types';
 import { generateSDPrompt } from './services/geminiService';
 import ModelSelector from './components/ModelSelector';
@@ -138,14 +138,7 @@ const App: React.FC = () => {
     }
   };
 
-  const getModelLabel = () => {
-    switch (model) {
-      case GeminiModel.FLASH_3: return "Gemini 3 Flash: 推薦首選，反應迅速且指令遵循力強。";
-      case GeminiModel.PRO_3: return "Gemini 3 Pro: 最強模型，擅長複雜構圖與精細細節描述。";
-      case GeminiModel.LITE_25: return "Gemini 2.5 Lite: 輕量高效，適合快速產生簡單標籤。";
-      default: return "";
-    }
-  };
+
 
   return (
     <div className="min-h-screen flex flex-col text-slate-200">
@@ -198,93 +191,84 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 lg:p-10 grid lg:grid-cols-2 gap-10">
 
         {/* Left Column: Input */}
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-4">
 
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">模型引擎</label>
-              <div className="h-px flex-1 bg-white/5" />
-            </div>
+          {/* 頂部整合工具列 */}
+          <section className="flex items-center gap-3 flex-wrap">
             <ModelSelector
               currentModel={model}
               onModelChange={setModel}
               disabled={loading}
             />
-            <p className="text-[11px] text-slate-500 italic px-1">
-              {getModelLabel()}
-            </p>
-          </section>
+            
+            <div className="h-6 w-px bg-white/10 mx-1" />
 
-          <section className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">視覺參考</label>
-              <div className="h-px flex-1 bg-white/5" />
-            </div>
-            <ImageUploader
-              selectedImage={selectedImage}
-              onImageChange={setSelectedImage}
-            />
-          </section>
-
-          <section className="space-y-4">
-            <div className="flex justify-between items-center px-1 gap-4">
-              <div className="flex items-center gap-2">
-                <Database size={14} className="text-slate-400" />
-                <label className="text-sm font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                  自訂標籤庫
+            <div className="flex items-center">
+              {tagDbContent ? (
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl shadow-lg shadow-emerald-500/5">
+                  <Database size={13} className="text-emerald-400" />
+                  <span className="text-[11px] text-emerald-400 font-bold uppercase tracking-tight">已載入標籤</span>
+                  <button
+                    onClick={() => setTagDbContent('')}
+                    className="text-emerald-500 hover:text-red-400 transition-colors ml-1"
+                    title="清除標籤庫"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : (
+                <label className="text-[11px] text-slate-400 hover:text-blue-300 font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-colors select-none px-3 py-2 hover:bg-white/5 border border-white/10 rounded-xl">
+                  <input
+                    type="file"
+                    accept=".txt,.json,.csv,.md"
+                    className="hidden"
+                    onChange={handleTagDbUpload}
+                    disabled={loading}
+                  />
+                  <Database size={13} />
+                  標籤庫
                 </label>
-              </div>
+              )}
+            </div>
+
+            <div className="flex-1 flex items-center gap-2 ml-2 min-w-[120px]">
               <div className="h-px flex-1 bg-white/5" />
-              <div className="flex items-center">
-                {tagDbContent ? (
-                  <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg shadow-lg shadow-emerald-500/5">
-                    <span className="text-xs text-emerald-400 font-semibold">✅ 已載入資料</span>
-                    <button
-                      onClick={() => setTagDbContent('')}
-                      className="text-emerald-500 hover:text-red-400 transition-colors"
-                      title="清除"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer flex items-center gap-1.5 transition-colors select-none px-3 py-1.5 bg-blue-500/5 hover:bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <input
-                      type="file"
-                      accept=".txt,.json,.csv,.md"
-                      className="hidden"
-                      onChange={handleTagDbUpload}
-                      disabled={loading}
-                    />
-                    <Upload size={14} />
-                    上傳參考檔案
-                  </label>
-                )}
-              </div>
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] whitespace-nowrap">視覺參考</label>
             </div>
           </section>
 
-          <section className="space-y-4">
+          {/* 視覺參考 — 核心區域 */}
+          <section className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 min-h-[200px]">
+              <ImageUploader
+                selectedImage={selectedImage}
+                onImageChange={setSelectedImage}
+              />
+            </div>
+          </section>
+
+          {/* 畫面靈感 */}
+          <section className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">畫面靈感</label>
               <div className="h-px flex-1 bg-white/5" />
             </div>
             <div className="relative group">
               <textarea
-                className="w-full h-44 bg-slate-900/50 border border-white/10 rounded-2xl p-5 pb-16 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/5 transition-all resize-none scrollbar-hide text-lg"
+                className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-2xl p-4 pb-14 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/5 transition-all resize-none scrollbar-hide"
                 placeholder="在此輸入您的想法... (例如：賽博龐克風格的貓，在霓虹燈下喝咖啡)"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={loading}
               />
-              <div className="absolute bottom-4 right-4 flex items-center gap-3">
+              <div className="absolute bottom-3 right-3 flex items-center gap-3">
                 <span className="text-[10px] text-slate-500 font-bold px-2 uppercase pointer-events-none hidden sm:inline-block tracking-wider">Ctrl + Enter</span>
                 <button
                   onClick={handleGenerate}
                   disabled={loading || (!inputText && !selectedImage)}
                   className={`
-                    px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all transform active:scale-95
+                    px-4 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all transform active:scale-95
                     ${loading || (!inputText && !selectedImage)
                       ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
                       : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/25'}
@@ -295,7 +279,7 @@ const App: React.FC = () => {
                   ) : (
                     <>
                       <Wand2 className="w-4 h-4" />
-                      開始魔法生成
+                      生成
                     </>
                   )}
                 </button>
