@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Wand2, Database, X, History as HistoryIcon, Key, Info, Settings as SettingsIcon } from 'lucide-react';
+import { Sparkles, Wand2, History as HistoryIcon, Key, Info, Settings as SettingsIcon } from 'lucide-react';
 import { GeminiModel, HistoryItem } from './types';
 import { generateSDPrompt } from './services/geminiService';
 import ModelSelector from './components/ModelSelector';
@@ -14,6 +14,8 @@ const App: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [tagDbContent, setTagDbContent] = useState<string>('');
+  const [isDanbooruEnabled, setIsDanbooruEnabled] = useState(false);
+  const [isFetchingTagDb, setIsFetchingTagDb] = useState(false);
   const [generatedContent, setGeneratedContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,20 +125,29 @@ const App: React.FC = () => {
     }
   };
 
-  const handleTagDbUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result;
-        if (typeof text === 'string') {
-          setTagDbContent(text);
+  useEffect(() => {
+    if (isDanbooruEnabled && !tagDbContent) {
+      const fetchDb = async () => {
+        setIsFetchingTagDb(true);
+        try {
+          const res = await fetch('/optimized_tag_database.txt');
+          if (res.ok) {
+            const text = await res.text();
+            setTagDbContent(text);
+          } else {
+            console.error("Fetch failed");
+          }
+        } catch (e) {
+          console.error("Failed to load tag database", e);
+        } finally {
+          setIsFetchingTagDb(false);
         }
       };
-      reader.readAsText(file);
-      e.target.value = '';
+      fetchDb();
+    } else if (!isDanbooruEnabled) {
+      setTagDbContent('');
     }
-  };
+  }, [isDanbooruEnabled]);
 
 
 
@@ -201,35 +212,7 @@ const App: React.FC = () => {
               disabled={loading}
             />
             
-            <div className="h-6 w-px bg-white/10 mx-1" />
-
-            <div className="flex items-center">
-              {tagDbContent ? (
-                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 rounded-xl shadow-lg shadow-emerald-500/5">
-                  <Database size={13} className="text-emerald-400" />
-                  <span className="text-[11px] text-emerald-400 font-bold uppercase tracking-tight">已載入標籤</span>
-                  <button
-                    onClick={() => setTagDbContent('')}
-                    className="text-emerald-500 hover:text-red-400 transition-colors ml-1"
-                    title="清除標籤庫"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ) : (
-                <label className="text-[11px] text-slate-400 hover:text-blue-300 font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 transition-colors select-none px-3 py-2 hover:bg-white/5 border border-white/10 rounded-xl">
-                  <input
-                    type="file"
-                    accept=".txt,.json,.csv,.md"
-                    className="hidden"
-                    onChange={handleTagDbUpload}
-                    disabled={loading}
-                  />
-                  <Database size={13} />
-                  標籤庫
-                </label>
-              )}
-            </div>
+            
 
             <div className="flex-1 flex items-center gap-2 ml-2 min-w-[120px]">
               <div className="h-px flex-1 bg-white/5" />
@@ -256,15 +239,41 @@ const App: React.FC = () => {
             <div className="relative group">
               <textarea
                 className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-2xl p-4 pb-14 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/40 focus:ring-4 focus:ring-blue-500/5 transition-all resize-none scrollbar-hide"
-                placeholder="在此輸入您的想法... (例如：賽博龐克風格的貓，在霓虹燈下喝咖啡)"
+                placeholder="輸入您的想法或 Danbooru 標籤... (例如：賽博龐克風格的貓，在霓虹燈下喝咖啡，或者 1girl, cat ears...)"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={loading}
               />
-              <div className="absolute bottom-3 right-3 flex items-center gap-3">
-                <span className="text-[10px] text-slate-500 font-bold px-2 uppercase pointer-events-none hidden sm:inline-block tracking-wider">Ctrl + Enter</span>
-                <button
+              <div className="absolute bottom-3 left-4 right-3 flex items-center justify-between pointer-events-none">
+                
+                {/* iOS Style Switch for Danbooru */}
+                <div className="pointer-events-auto flex items-center">
+                  <label className="flex items-center gap-2.5 cursor-pointer group" title="啟用高度優化 Danbooru 標籤庫">
+                    <div className={`relative flex items-center w-9 h-5 rounded-full p-0.5 transition-colors duration-300 ${isDanbooruEnabled ? 'bg-emerald-500' : 'bg-slate-700/80'}`}>
+                      <input 
+                        type="checkbox" 
+                        className="sr-only" 
+                        checked={isDanbooruEnabled}
+                        onChange={() => setIsDanbooruEnabled(!isDanbooruEnabled)}
+                        disabled={loading || isFetchingTagDb}
+                      />
+                      <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ease-in-out ${isDanbooruEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                      {isFetchingTagDb && (
+                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                           <div className="w-3 h-3 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                         </div>
+                      )}
+                    </div>
+                    <span className={`text-[11px] font-bold uppercase tracking-tight transition-colors duration-300 ${isDanbooruEnabled ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'text-slate-500 group-hover:text-slate-400'}`}>
+                      Danbooru 標籤
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-3 pointer-events-auto">
+                  <span className="text-[10px] text-slate-500 font-bold px-2 uppercase pointer-events-none hidden sm:inline-block tracking-wider">Ctrl + Enter</span>
+                  <button
                   onClick={handleGenerate}
                   disabled={loading || (!inputText && !selectedImage)}
                   className={`
@@ -283,6 +292,7 @@ const App: React.FC = () => {
                     </>
                   )}
                 </button>
+                </div>
               </div>
             </div>
             {error && <p className="text-xs text-red-400 font-medium px-1 flex items-center gap-1"><Info size={12} /> {error}</p>}
@@ -320,8 +330,8 @@ const App: React.FC = () => {
                 <p className="text-[11px] text-slate-400">金鑰僅存於本地，確保隱私安全。</p>
               </div>
               <div className="space-y-1 text-right">
-                <p className="text-[10px] font-bold text-slate-600 uppercase">社群支援</p>
-                <p className="text-[11px] text-slate-400">優化各種 SD 模型相容性。</p>
+                <p className="text-[10px] font-bold text-slate-600 uppercase">標籤庫支援 (Danbooru)</p>
+                <p className="text-[11px] text-slate-400">系統已預設優先對齊 Danbooru 的標準圖庫標籤。</p>
               </div>
             </div>
           </div>
