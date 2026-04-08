@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GeminiModel } from '../types';
-import { Zap, Brain, Rocket, ChevronDown } from 'lucide-react';
+import { Zap, Brain, Rocket, ChevronDown, Cpu, Layers } from 'lucide-react';
 
 interface ModelSelectorProps {
   currentModel: GeminiModel;
@@ -31,6 +31,24 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
       color: 'text-purple-400',
       dotColor: 'bg-purple-500',
       description: '最強模型，擅長複雜構圖與精細細節描述',
+    },
+    {
+      id: GeminiModel.GEMMA_3,
+      label: 'Gemma',
+      fullName: 'Gemma 3 27B',
+      icon: <Cpu size={14} />,
+      color: 'text-orange-400',
+      dotColor: 'bg-orange-500',
+      description: '開放權重模型，適合本地運行與隱私優先',
+    },
+    {
+      id: GeminiModel.PALIGEMMA_3,
+      label: 'Pali',
+      fullName: 'PaliGemma 3',
+      icon: <Layers size={14} />,
+      color: 'text-pink-400',
+      dotColor: 'bg-pink-500',
+      description: '專業視覺標籤模型，極致的圖片轉文字能力',
     },
     {
       id: GeminiModel.LITE_25,

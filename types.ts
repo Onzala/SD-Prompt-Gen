@@ -1,7 +1,9 @@
 export enum GeminiModel {
   FLASH_3 = 'gemini-3-flash-preview',
   PRO_3 = 'gemini-3-pro-preview',
-  LITE_25 = 'gemini-flash-lite-latest'
+  LITE_25 = 'gemini-flash-lite-latest',
+  GEMMA_3 = 'gemma-3-27b-it',
+  PALIGEMMA_3 = 'paligemma-3-mix-224'
 }
 
 export interface PromptResponse {
