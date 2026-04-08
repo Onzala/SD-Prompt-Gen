@@ -16,6 +16,9 @@ export const generateSDPrompt = async (
     throw new Error("找不到 API 金鑰。請在設定中輸入您的 Gemini API Key。");
   }
 
+  // 0. 判斷模型家族
+  const isGemma = model.includes('gemma');
+
   // 初始化 SDK - 使用物件形式，並標記為 any 以應對複雜的 SDK 型別問題
   const genAI: any = new GoogleGenAI({ apiKey } as any);
 
@@ -44,7 +47,12 @@ export const generateSDPrompt = async (
     finalPrompt += `\n\n[Reference Tag Database]\nUtilize relevant keywords from this technical list if they match the visual requirements:\n\n"""\n${tagDbContent}\n"""`;
   }
 
-  parts.push({ text: finalPrompt });
+  // 3. 處理 Gemma 不支援 systemInstruction 的問題
+  const effectivePrompt = isGemma 
+    ? `${SYSTEM_PROMPT}\n\n### 任務指示\n請根據上述角色設定與格式規範，處理以下請求：\n${finalPrompt}`
+    : finalPrompt;
+
+  parts.push({ text: effectivePrompt });
 
   try {
     // 使用原 SDK 的 ai.models.generateContent 模式
@@ -55,7 +63,8 @@ export const generateSDPrompt = async (
         parts: parts
       }],
       config: {
-        systemInstruction: SYSTEM_PROMPT || undefined,
+        // 如果是 Gemma 系列，則不傳送 systemInstruction
+        systemInstruction: isGemma ? undefined : (SYSTEM_PROMPT || undefined),
         temperature: 0.8,
         topP: 0.95,
       },
