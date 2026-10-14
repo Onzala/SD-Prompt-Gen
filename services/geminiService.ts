@@ -149,6 +149,8 @@ CRITICAL REQUIREMENT: This is the official canonical tag from Danbooru (for exam
       extraInstructions += `\n\n[SPECIFIED DANBOORU ARTIST TAG]: "${canonicalTag}".
 CRITICAL REQUIREMENT: This is the official canonical tag from Danbooru. You MUST include (by ${canonicalTag}:1.1) or (${canonicalTag}:1.1) in the tags and emulate this artist's visual style accurately.`;
     }
+  } else {
+    extraInstructions += `\n\n[NO ARTIST SPECIFIED]: Do NOT include any artist tag or artist name (no "(by xxx:1.1)", no "{artist:xxx}"). Describe the style only with generic style tags.`;
   }
 
   let finalPrompt = inputText;

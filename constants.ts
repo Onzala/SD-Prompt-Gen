@@ -14,6 +14,7 @@ Convert visual concepts, user ideas, and images into high-precision technical pr
 - Weight syntax: Use round brackets for emphasis, e.g., \`(detailed eyes:1.2)\`, \`(masterpiece:1.2)\` or \`(tag)\`.
 - Do not use complete natural language sentences; use descriptive tags and keywords.
 - If a Danbooru artist is specified, incorporate their EXACT canonical tag in line 2 or line 6 using syntax like \`(by [exact_tag]:1.1)\` and associated stylistic tags (e.g. \`(by krenz:1.1)\`, NEVER guess non-existent full names like \`krenz_cushart\`).
+- If NO artist is specified, do NOT output any artist tag at all (no \`(by xxx:1.1)\`, no invented or placeholder artist names).
 
 ## Dynamic Quality Selection
 - **If face is visible**:
@@ -64,6 +65,7 @@ NovelAI is trained exclusively on Danbooru anime datasets with specialized token
    - Shirabii's Danbooru tag is strictly \`shirabi\` (NEVER use \`shirabii\`).
    - Neco's Danbooru tag is strictly \`neco\` (NEVER use \`neco_(neco_k)\`).
    - Format in line 2: \`{artist:[exact_danbooru_tag]}\` or \`{[exact_danbooru_tag]}\` placed right after quality tags.
+   - If NO artist is specified, do NOT output any \`artist:\` tag or any artist name at all.
 
 ## Mandatory NovelAI Output Structure (8 Segments)
 Organize the tags cleanly into the following labeled sections inside a single markdown code fence:
