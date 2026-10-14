@@ -1,45 +1,29 @@
+# AI 繪畫提示詞專家（SD & NovelAI）
 
-# 🌌 SD Prompt Generator - Standalone Web Edition
+以 Google Gemini 將文字描述或參考圖片轉成 Stable Diffusion／NovelAI 提示詞的網頁工具。
 
-專業的 Stable Diffusion 提示詞生成器。這是一個已從 Google AI Studio 環境轉化為獨立網頁版的應用程式。
+🌐 線上版：https://onzala.github.io/SD-Prompt-Gen/
 
-## ✨ 核心特色
+## 功能
 
-- **Standalone 運行**: 無需依賴特定的擴充環境。
-- **高質感介面**: 採用玻璃擬態 (Glassmorphism) 設計與現代漸層質感。
-- **Gemini 驅動**: 支援最新 Gemini 3 Pro/Flash 模型，提供極致的提示詞遵循力。
-- **本地金鑰管理**: API Key 儲存於瀏覽器本地，隱私安全無虞。
-- **視覺參考**: 支援圖片上傳，AI 自動分析構圖與色彩標籤。
+- **雙格式輸出**：Stable Diffusion（`(tag:1.2)` 權重）與 NovelAI（`{tag}` Danbooru 標籤）
+- **Danbooru 畫師風格庫**：指定畫師並自動修正為正確的 Danbooru 標籤
+- **視覺參考**：上傳、拖曳或貼上圖片，可裁切後讓 AI 解析
+- **模型切換與自動備援**：遇 503／429 尖峰時自動改用備援模型
+- **AI 修改建議**：生成後提供三個可一鍵套用的微調方向
+- **歷史紀錄**：保存在瀏覽器本地
 
-## 🚀 快速開始
+## 使用方式
 
-### 本地運行
+第一次開啟時輸入自己的 Gemini API 金鑰（[到 Google AI Studio 取得](https://aistudio.google.com/apikey)）。金鑰只存在你自己瀏覽器的 localStorage，並直接從瀏覽器呼叫 Gemini API，不經過任何中介伺服器。
 
-1. **安裝依賴**:
+## 本地開發
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+npm run dev
+```
 
-2. **啟動開發伺服器**:
+## 部署
 
-   ```bash
-   npm run dev
-   ```
-
-3. **設定金鑰**:
-   點擊右上角「尚未設定 API」並輸入您的 Google Gemini API Key。
-
-### 部署
-
-1. **打包專案**:
-
-   ```bash
-   npm run build
-   ```
-
-2. **部署路徑**:
-   將 `dist` 資料夾內容部署至 Vercel, Netlify 或 GitHub Pages。
-
----
-*Crafted with ❤️ for the AI Art Community.*
+推送到 `main` 後，GitHub Actions（`.github/workflows/deploy.yml`）會自動建置並發佈到 GitHub Pages。

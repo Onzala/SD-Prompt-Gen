@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { X, Clock, Trash2, ChevronRight, Copy, Check } from 'lucide-react';
-import { HistoryItem, GeminiModel } from '../types';
+import { X, Clock, Trash2, ChevronRight, Copy, Check, Palette } from 'lucide-react';
+import { HistoryItem, PromptFormat } from '../types';
 
 interface HistorySidebarProps {
   isOpen: boolean;
@@ -31,9 +30,16 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
     });
   };
 
+  const getModelLabel = (modelStr: string) => {
+    if (modelStr.includes('3.8')) return 'Gemini 3.8 Flash';
+    if (modelStr.includes('pro')) return 'Gemini 3.1 Pro';
+    if (modelStr.includes('lite')) return '3.1 Flash Lite';
+    if (modelStr.includes('flash')) return 'Flash';
+    return modelStr;
+  };
+
   const handleCopy = (e: React.MouseEvent, content: string, id: string) => {
     e.stopPropagation();
-    // Extract prompt content (remove markdown code blocks if present)
     const match = content.match(/```(?:[\w]*\n)?([\s\S]*?)```/);
     const textToCopy = match ? match[1].trim() : content;
     
@@ -61,7 +67,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50">
             <h2 className="text-lg font-bold flex items-center gap-2 text-slate-200">
-              <Clock size={20} />
+              <Clock size={20} className="text-blue-400" />
               歷史紀錄
             </h2>
             <div className="flex items-center gap-2">
@@ -97,16 +103,25 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                   onClick={() => onSelect(item)}
                   className="group relative bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl p-3 cursor-pointer transition-all"
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    {/* Fix: Property 'FLASH' does not exist on type 'typeof GeminiModel'. Correcting to 'FLASH_3' */}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                      item.model === GeminiModel.FLASH_3 
-                        ? 'bg-blue-500/10 text-blue-300 border-blue-500/20' 
-                        : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
-                    }`}>
-                      {/* Fix: Property 'FLASH' does not exist on type 'typeof GeminiModel'. Correcting to 'FLASH_3' */}
-                      {item.model === GeminiModel.FLASH_3 ? 'Flash' : 'Pro'}
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-300 border-blue-500/20 font-medium">
+                        {getModelLabel(item.model)}
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold ${
+                        item.format === PromptFormat.NAI
+                          ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                      }`}>
+                        {item.format || 'SD'}
+                      </span>
+                      {item.artist && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-pink-500/10 text-pink-300 border-pink-500/30 flex items-center gap-0.5 font-mono">
+                          <Palette size={9} />
+                          {item.artist}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-slate-500">
                       {formatDate(item.timestamp)}
                     </span>

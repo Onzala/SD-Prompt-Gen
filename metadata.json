@@ -1,5 +1,0 @@
-{
-  "name": "SD Prompt Gen",
-  "description": "AI-powered Stable Diffusion prompt generator using Gemini. Converts text and images into high-quality, tag-based prompts.",
-  "requestFramePermissions": []
-}

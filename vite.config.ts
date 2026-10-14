@@ -1,20 +1,12 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  // Load env file based on `mode` in the current working directory.
-  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
-  const env = loadEnv(mode, '.', '');
-
-  return {
-    plugins: [react()],
-    define: {
-      // Expose the process.env.API_KEY to the client-side code
-      'process.env.API_KEY': JSON.stringify(env.API_KEY)
-    },
-    server: {
-      host: true
-    }
-  };
+export default defineConfig({
+  plugins: [react()],
+  // 相對路徑，讓 GitHub Pages 子路徑（/SD-Prompt-Gen/）也能正確載入資源
+  base: './',
+  server: {
+    host: true
+  }
 });

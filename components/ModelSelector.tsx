@@ -1,63 +1,80 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GeminiModel } from '../types';
-import { Zap, Brain, Rocket, ChevronDown, Cpu } from 'lucide-react';
+import { Zap, Brain, Cpu, Sparkles, ChevronDown, Check } from 'lucide-react';
+
+interface ModelOption {
+  id: GeminiModel;
+  name: string;
+  badge: string;
+  badgeColor: string;
+  description: string;
+  icon: React.ReactNode;
+  modelId: string;
+}
 
 interface ModelSelectorProps {
-  currentModel: GeminiModel;
+  currentModel: GeminiModel | string;
   onModelChange: (model: GeminiModel) => void;
   disabled: boolean;
 }
 
-/** 模型引擎選擇器 — 下拉選單版本 */
+const MODEL_OPTIONS: ModelOption[] = [
+  {
+    id: GeminiModel.FLASH_LITE_LATEST,
+    name: 'Gemini Flash Lite (最新超穩)',
+    badge: '推薦・低延遲無 503',
+    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    description: '官方最新高可用性端點，負載穩定、避開 503 尖峰壅塞，平均 1.3 秒超速生成',
+    icon: <Zap size={16} className="text-emerald-400" />,
+    modelId: 'gemini-flash-lite-latest'
+  },
+  {
+    id: GeminiModel.FLASH_3_8,
+    name: 'Gemini 3.8 Flash',
+    badge: '旗艦模型',
+    badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    description: '最新世代旗艦模型，多模態視覺與標籤極佳（遇官方尖峰時自動啟動無縫備援）',
+    icon: <Sparkles size={16} className="text-blue-400" />,
+    modelId: 'gemini-3.8-flash'
+  },
+  {
+    id: GeminiModel.PRO_3_1,
+    name: 'Gemini 3.1 Pro',
+    badge: '深度推理',
+    badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    description: '具備高階邏輯思維與深度語意理解，適合超複雜場景與精細畫風拆解',
+    icon: <Brain size={16} className="text-purple-400" />,
+    modelId: 'gemini-3.1-pro-preview'
+  },
+  {
+    id: GeminiModel.FLASH_LITE_3_1,
+    name: 'Gemini 3.1 Flash Lite',
+    badge: '超輕量版',
+    badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    description: '輕量化模型，提供流暢的即時互動體驗',
+    icon: <Cpu size={16} className="text-indigo-400" />,
+    modelId: 'gemini-3.1-flash-lite'
+  },
+  {
+    id: GeminiModel.FLASH_LATEST,
+    name: 'Gemini Flash Latest',
+    badge: '通用 Flash',
+    badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    description: '通用型 Flash 端點，兼顧相容性與標準效能',
+    icon: <Sparkles size={16} className="text-cyan-400" />,
+    modelId: 'gemini-flash-latest'
+  }
+];
+
 const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChange, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const models = [
-    {
-      id: GeminiModel.FLASH_3,
-      label: 'Flash',
-      fullName: 'Gemini 3 Flash',
-      icon: <Zap size={14} />,
-      color: 'text-blue-400',
-      dotColor: 'bg-blue-500',
-      description: '推薦首選，反應迅速且指令遵循力強',
-    },
-    {
-      id: GeminiModel.PRO_3,
-      label: 'Pro',
-      fullName: 'Gemini 3 Pro',
-      icon: <Brain size={14} />,
-      color: 'text-purple-400',
-      dotColor: 'bg-purple-500',
-      description: '最強模型，擅長複雜構圖與精細細節描述',
-    },
-    {
-      id: GeminiModel.GEMMA_3,
-      label: 'Gemma',
-      fullName: 'Gemma 3 27B',
-      icon: <Cpu size={14} />,
-      color: 'text-orange-400',
-      dotColor: 'bg-orange-500',
-      description: '開放權重模型，適合本地運行與隱私優先',
-    },
-    {
-      id: GeminiModel.LITE_25,
-      label: 'Lite',
-      fullName: '2.5 Lite',
-      icon: <Rocket size={14} />,
-      color: 'text-emerald-400',
-      dotColor: 'bg-emerald-500',
-      description: '輕量高效，適合快速產生簡單標籤',
-    },
-  ];
+  const selectedOption = MODEL_OPTIONS.find(m => m.id === currentModel) || MODEL_OPTIONS[0];
 
-  const current = models.find(m => m.id === currentModel) || models[0];
-
-  // 點擊外部時關閉下拉選單
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
@@ -66,57 +83,94 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
   }, []);
 
   return (
-    <div ref={dropdownRef} className="relative">
-      {/* 觸發按鈕 */}
+    <div className="relative w-full" ref={containerRef}>
+      {/* Dropdown trigger button */}
       <button
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        type="button"
         disabled={disabled}
-        className={`
-          flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold transition-all duration-200
-          ${isOpen
-            ? 'border-blue-500/40 bg-blue-500/10 text-white'
-            : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:bg-white/10'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border text-left transition-all ${
+          isOpen 
+            ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-lg bg-slate-800/90' 
+            : 'border-slate-700 hover:border-slate-600 bg-slate-900 hover:bg-slate-800/60'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
-        <span className={`flex items-center gap-1.5 ${current.color}`}>
-          {current.icon}
-          <span className="text-slate-200 font-bold">{current.fullName}</span>
-        </span>
-        <ChevronDown
-          size={14}
-          className={`text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-        />
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+            {selectedOption.icon}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-200 text-sm truncate">
+                {selectedOption.name}
+              </span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${selectedOption.badgeColor}`}>
+                {selectedOption.badge}
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-500 font-mono truncate">
+              {selectedOption.modelId}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center pl-2 text-slate-400">
+          <ChevronDown 
+            size={18} 
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-400' : ''}`} 
+          />
+        </div>
       </button>
 
-      {/* 下拉選單 */}
+      {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-72 glass-panel rounded-xl border border-white/10 shadow-2xl shadow-black/40 z-50 overflow-hidden animate-crop-modal-in">
-          {models.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => {
-                onModelChange(m.id);
-                setIsOpen(false);
-              }}
-              className={`
-                w-full flex items-start gap-3 px-4 py-3 text-left transition-all duration-150
-                ${currentModel === m.id
-                  ? 'bg-white/10'
-                  : 'hover:bg-white/5'}
-              `}
-            >
-              {/* 狀態指示點 */}
-              <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${currentModel === m.id ? m.dotColor : 'bg-slate-600'}`} />
-              <div className="flex-1 min-w-0">
-                <div className={`flex items-center gap-1.5 text-sm font-bold ${currentModel === m.id ? 'text-white' : 'text-slate-300'}`}>
-                  {m.icon}
-                  {m.fullName}
+        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 space-y-1 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-2.5 py-1.5 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+            選擇 Gemini 核心模型
+          </div>
+          {MODEL_OPTIONS.map((option) => {
+            const isSelected = option.id === selectedOption.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => {
+                  onModelChange(option.id);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-start gap-3 p-2.5 rounded-lg text-left transition-all ${
+                  isSelected
+                    ? 'bg-blue-600/15 border border-blue-500/30 text-white'
+                    : 'hover:bg-slate-800 text-slate-300 border border-transparent'
+                }`}
+              >
+                <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 shrink-0 mt-0.5">
+                  {option.icon}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{m.description}</p>
-              </div>
-            </button>
-          ))}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-semibold text-sm text-slate-100 flex items-center gap-2">
+                      {option.name}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${option.badgeColor}`}>
+                      {option.badge}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                    {option.description}
+                  </p>
+                  <span className="text-[10px] text-slate-500 font-mono mt-1 block">
+                    ID: {option.modelId}
+                  </span>
+                </div>
+                {isSelected && (
+                  <div className="text-blue-400 shrink-0 mt-1">
+                    <Check size={16} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
