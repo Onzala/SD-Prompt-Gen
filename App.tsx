@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, MessageCircle, Send, History as HistoryIcon, Info, Lightbulb, Square, RefreshCw, AlertCircle, CheckCircle2, KeyRound } from 'lucide-react';
+import { Sparkles, MessageCircle, Send, History as HistoryIcon, Info, Lightbulb, Square, RefreshCw, AlertCircle, CheckCircle2, KeyRound, ShieldAlert } from 'lucide-react';
 import { GeminiModel, PromptFormat, HistoryItem, ModificationSuggestion } from './types';
 import { generateSDPrompt, getRefinementSuggestions, getStoredApiKey, setStoredApiKey } from './services/geminiService';
 import ModelSelector from './components/ModelSelector';
@@ -9,6 +9,7 @@ import ImageUploader from './components/ImageUploader';
 import OutputDisplay from './components/OutputDisplay';
 import HistorySidebar from './components/HistorySidebar';
 import ApiKeyModal from './components/ApiKeyModal';
+import ModerationStatsModal from './components/ModerationStatsModal';
 
 const App: React.FC = () => {
   const [model, setModel] = useState<GeminiModel | string>(GeminiModel.FLASH_LITE_LATEST);
@@ -25,6 +26,7 @@ const App: React.FC = () => {
   
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey());
   const [isApiKeyOpen, setIsApiKeyOpen] = useState(() => !getStoredApiKey());
@@ -185,6 +187,14 @@ const App: React.FC = () => {
             >
               <KeyRound size={15} className={apiKey ? 'text-emerald-400' : 'text-amber-400'} />
               <span className="hidden sm:inline">{apiKey ? 'API 金鑰' : '尚未設定 API'}</span>
+            </button>
+            <button
+              onClick={() => setIsStatsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-800 border border-slate-700 rounded-lg transition-all"
+              title="各模型審查統計"
+            >
+              <ShieldAlert size={15} className="text-red-400" />
+              <span className="hidden sm:inline">審查統計</span>
             </button>
             <button 
               onClick={() => setIsHistoryOpen(true)} 
@@ -416,6 +426,8 @@ const App: React.FC = () => {
            </div>
         </div>
       </main>
+
+      <ModerationStatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} />
 
       <ApiKeyModal
         isOpen={isApiKeyOpen}

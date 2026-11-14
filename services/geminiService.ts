@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { GeminiModel, PromptFormat, ModificationSuggestion } from "../types";
 import { SYSTEM_PROMPT_SD, SYSTEM_PROMPT_NAI, SUGGESTION_PROMPT, resolveDanbooruTag } from "../constants";
+import { recordModerationOutcome, getBlockReason, looksLikeRefusal } from "./moderationStats";
 
 export interface GenerateResult {
   content: string;
@@ -192,13 +193,26 @@ CRITICAL REQUIREMENT: This is the official canonical tag from Danbooru. You MUST
           },
         });
 
-        const candidate = response.candidates?.[0];
-        if (candidate?.finishReason === 'SAFETY') {
-          return { content: '【安全性警告】過濾器攔截了部分輸出。請嘗試調整提示詞或使用更具藝術學術性的標籤描述。' };
+        const hasImage = !!imageBase64;
+        const blockReason = getBlockReason(response);
+        if (blockReason) {
+          recordModerationOutcome(targetModel, hasImage, 'blocked', blockReason);
+          return {
+            content: `【安全性警告】${targetModel} 的過濾器攔截了輸出（${blockReason}）。可以換其他模型試試，或調整提示詞、使用更具藝術學術性的標籤描述。`,
+            usedModel: targetModel,
+          };
         }
 
         responseText = response.text || '';
         usedModel = targetModel;
+        if (!responseText.trim()) {
+          recordModerationOutcome(targetModel, hasImage, 'empty');
+          return {
+            content: `【無回應】${targetModel} 回傳了空白內容，可能是被隱性審查。可以換其他模型試試。`,
+            usedModel: targetModel,
+          };
+        }
+        recordModerationOutcome(targetModel, hasImage, looksLikeRefusal(responseText) ? 'refused' : 'ok');
         break; // Successfully generated!
       } catch (err: any) {
         if (signal?.aborted || isAbortError(err)) throw new Error('GenerationCancelled');
