@@ -32,9 +32,9 @@ const MODEL_OPTIONS: ModelOption[] = [
     id: GeminiModel.FLASH_3_8,
     name: 'Gemini 3.8 Flash',
     badge: '旗艦模型',
-    badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    badgeColor: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
     description: '最新世代旗艦模型，多模態視覺與標籤極佳（遇官方尖峰時自動啟動無縫備援）',
-    icon: <Sparkles size={16} className="text-blue-400" />,
+    icon: <Sparkles size={16} className="text-violet-400" />,
     modelId: 'gemini-3.8-flash'
   },
   {
@@ -89,14 +89,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 border text-left transition-all ${
+        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
           isOpen 
-            ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-lg bg-slate-800/90' 
-            : 'border-slate-700 hover:border-slate-600 bg-slate-900 hover:bg-slate-800/60'
+            ? 'border-violet-500/60 ring-2 ring-violet-500/20 bg-slate-900' 
+            : 'border-white/[0.08] hover:border-white/15 bg-slate-950/50 hover:bg-white/[0.03]'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
+          <div className="p-2 rounded-lg bg-slate-800 border border-white/[0.08] flex items-center justify-center shrink-0">
             {selectedOption.icon}
           </div>
           <div className="flex flex-col min-w-0">
@@ -117,14 +117,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
         <div className="flex items-center pl-2 text-slate-400">
           <ChevronDown 
             size={18} 
-            className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-400' : ''}`} 
+            className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-violet-400' : ''}`} 
           />
         </div>
       </button>
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 space-y-1 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900/95 border border-white/[0.08] rounded-xl shadow-2xl p-1.5 space-y-1 backdrop-blur-xl animate-pop-in">
           <div className="px-2.5 py-1.5 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
             選擇 Gemini 核心模型
           </div>
@@ -140,11 +140,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
                 }}
                 className={`w-full flex items-start gap-3 p-2.5 rounded-lg text-left transition-all ${
                   isSelected
-                    ? 'bg-blue-600/15 border border-blue-500/30 text-white'
+                    ? 'bg-violet-600/15 border border-violet-500/30 text-white'
                     : 'hover:bg-slate-800 text-slate-300 border border-transparent'
                 }`}
               >
-                <div className="p-2 rounded-lg bg-slate-800 border border-slate-700 shrink-0 mt-0.5">
+                <div className="p-2 rounded-lg bg-slate-800 border border-white/[0.08] shrink-0 mt-0.5">
                   {option.icon}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -164,7 +164,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
                   </span>
                 </div>
                 {isSelected && (
-                  <div className="text-blue-400 shrink-0 mt-1">
+                  <div className="text-violet-400 shrink-0 mt-1">
                     <Check size={16} />
                   </div>
                 )}

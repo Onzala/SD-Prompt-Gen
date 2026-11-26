@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, Trash2, ChevronRight, Copy, Check, Palette } from 'lucide-react';
 import { HistoryItem, PromptFormat } from '../types';
+import { useEscape } from '../hooks/useEscape';
 
 interface HistorySidebarProps {
   isOpen: boolean;
@@ -20,6 +21,8 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
   onDelete
 }) => {
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  useEscape(isOpen, onClose);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString('zh-TW', {
@@ -60,14 +63,14 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
       )}
 
       {/* Sidebar Panel */}
-      <div className={`fixed inset-y-0 right-0 w-full sm:w-96 bg-slate-900 border-l border-slate-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed inset-y-0 right-0 w-full sm:w-96 bg-slate-900/95 backdrop-blur-xl border-l border-white/[0.06] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50">
-            <h2 className="text-lg font-bold flex items-center gap-2 text-slate-200">
-              <Clock size={20} className="text-blue-400" />
+          <div className="flex items-center justify-between p-4 border-b border-white/[0.06] bg-slate-900/50">
+            <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-100">
+              <Clock size={20} className="text-violet-400" />
               歷史紀錄
             </h2>
             <div className="flex items-center gap-2">
@@ -90,7 +93,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
           </div>
 
           {/* List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {history.length === 0 ? (
               <div className="text-center text-slate-500 mt-10">
                 <p>尚無歷史紀錄</p>
@@ -101,11 +104,11 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 <div 
                   key={item.id}
                   onClick={() => onSelect(item)}
-                  className="group relative bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl p-3 cursor-pointer transition-all"
+                  className="group relative bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.08] hover:border-slate-600 rounded-xl p-3 cursor-pointer transition-all"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border bg-blue-500/10 text-blue-300 border-blue-500/20 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border bg-violet-500/10 text-violet-300 border-violet-500/20 font-medium">
                         {getModelLabel(item.model)}
                       </span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-bold ${
@@ -136,7 +139,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                      </p>
                   </div>
 
-                  <div className="flex justify-between items-center mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-between items-center mt-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -156,7 +159,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                             {copiedId === item.id ? <Check size={12} /> : <Copy size={12} />}
                             {copiedId === item.id ? '已複製' : '複製'}
                         </button>
-                        <span className="flex items-center gap-1 text-[10px] text-blue-400 font-medium">
+                        <span className="flex items-center gap-1 text-[10px] text-violet-400 font-medium">
                             載入 <ChevronRight size={12} />
                         </span>
                       </div>

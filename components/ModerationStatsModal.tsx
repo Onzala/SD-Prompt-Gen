@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ShieldAlert, X, Trash2 } from 'lucide-react';
 import { loadModerationStats, clearModerationStats, ModerationOutcome } from '../services/moderationStats';
+import { useEscape } from '../hooks/useEscape';
 
 interface ModerationStatsModalProps {
   isOpen: boolean;
@@ -48,15 +49,20 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
     // version 只用來在清除後重新計算
   }, [isOpen, scope, version]);
 
+  useEscape(isOpen, onClose);
+
   if (!isOpen) return null;
 
   const rateColor = (rate: number) =>
     rate >= 0.5 ? 'text-red-400' : rate >= 0.2 ? 'text-amber-400' : 'text-emerald-400';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
       <div
-        className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="各模型審查統計"
+        className="card w-full max-w-2xl bg-slate-900 shadow-2xl p-5 space-y-4 animate-pop-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -64,7 +70,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
             <ShieldAlert size={16} className="text-red-400" />
             各模型審查統計
           </h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white">
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white" aria-label="關閉">
             <X size={18} />
           </button>
         </div>
@@ -77,8 +83,8 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
               onClick={() => setScope(s)}
               className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${
                 scope === s
-                  ? 'bg-blue-600/20 border-blue-500/50 text-blue-200'
-                  : 'border-slate-700 text-slate-400 hover:text-slate-200'
+                  ? 'bg-violet-500/15 border-violet-500/40 text-violet-100'
+                  : 'border-white/[0.08] text-slate-400 hover:text-slate-200'
               }`}
             >
               {SCOPE_LABELS[s]}
@@ -94,7 +100,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-slate-500 border-b border-slate-800">
+                <tr className="text-slate-500 border-b border-white/[0.06]">
                   <th className="text-left font-medium py-2 pr-2">模型</th>
                   <th className="text-right font-medium py-2 px-2">次數</th>
                   <th className="text-right font-medium py-2 px-2">成功</th>
@@ -106,7 +112,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.model} className="border-b border-slate-800/60 text-slate-300">
+                  <tr key={r.model} className="border-b border-white/[0.05] text-slate-300">
                     <td className="py-2 pr-2 font-mono text-[11px]" title={r.lastBlockReason ? `最近攔截原因：${r.lastBlockReason}` : undefined}>
                       {r.model}
                     </td>
@@ -137,7 +143,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
                 setVersion((v) => v + 1);
               }
             }}
-            className="shrink-0 flex items-center gap-1 px-3 py-2 text-xs rounded-lg border border-slate-700 text-slate-400 hover:text-red-300 hover:border-red-500/40"
+            className="shrink-0 flex items-center gap-1 px-3 py-2 text-xs rounded-lg border border-white/[0.08] text-slate-400 hover:text-red-300 hover:border-red-500/40"
           >
             <Trash2 size={12} /> 清除統計
           </button>

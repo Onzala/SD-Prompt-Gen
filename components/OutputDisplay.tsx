@@ -9,24 +9,26 @@ interface OutputDisplayProps {
 }
 
 const SD_CATEGORIES = [
-  { label: '品質標籤 (Quality)', color: 'text-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/5' },
-  { label: '主體特徵 (Subject & Anatomy)', color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
-  { label: '服裝穿著 (Attire & Clothing)', color: 'text-pink-400', border: 'border-pink-500/20', bg: 'bg-pink-500/5' },
-  { label: '姿勢動作 (Pose & Composition)', color: 'text-yellow-400', border: 'border-yellow-500/20', bg: 'bg-yellow-500/5' },
-  { label: '場景背景 (Setting & Background)', color: 'text-green-400', border: 'border-green-500/20', bg: 'bg-green-500/5' },
-  { label: '光影氣氛 (Lighting & Atmosphere)', color: 'text-cyan-400', border: 'border-cyan-500/20', bg: 'bg-cyan-500/5' },
+  { label: '品質標籤', en: 'Quality', dot: 'bg-violet-400' },
+  { label: '主體特徵', en: 'Subject & Anatomy', dot: 'bg-sky-400' },
+  { label: '服裝穿著', en: 'Attire & Clothing', dot: 'bg-pink-400' },
+  { label: '姿勢動作', en: 'Pose & Composition', dot: 'bg-amber-400' },
+  { label: '場景背景', en: 'Setting & Background', dot: 'bg-emerald-400' },
+  { label: '光影氣氛', en: 'Lighting & Atmosphere', dot: 'bg-cyan-400' },
 ];
 
 const NAI_CATEGORIES = [
-  { label: '品質年份 (Quality & Year)', color: 'text-purple-400', border: 'border-purple-500/20', bg: 'bg-purple-500/5' },
-  { label: '畫師風格 (Artist & Style)', color: 'text-pink-400', border: 'border-pink-500/20', bg: 'bg-pink-500/5' },
-  { label: '角色主體 (Subject & Character)', color: 'text-blue-400', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
-  { label: '髮型五官 (Hair & Features)', color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/5' },
-  { label: '服裝穿著 (Attire & Accessories)', color: 'text-rose-400', border: 'border-rose-500/20', bg: 'bg-rose-500/5' },
-  { label: '動作構圖 (Pose & Composition)', color: 'text-yellow-400', border: 'border-yellow-500/20', bg: 'bg-yellow-500/5' },
-  { label: '場景環境 (Setting & Environment)', color: 'text-emerald-400', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
-  { label: '光影氛圍 (Lighting & Atmosphere)', color: 'text-cyan-400', border: 'border-cyan-500/20', bg: 'bg-cyan-500/5' },
+  { label: '品質年份', en: 'Quality & Year', dot: 'bg-violet-400' },
+  { label: '畫師風格', en: 'Artist & Style', dot: 'bg-fuchsia-400' },
+  { label: '角色主體', en: 'Subject & Character', dot: 'bg-sky-400' },
+  { label: '髮型五官', en: 'Hair & Features', dot: 'bg-amber-400' },
+  { label: '服裝穿著', en: 'Attire & Accessories', dot: 'bg-pink-400' },
+  { label: '動作構圖', en: 'Pose & Composition', dot: 'bg-yellow-400' },
+  { label: '場景環境', en: 'Setting & Environment', dot: 'bg-emerald-400' },
+  { label: '光影氛圍', en: 'Lighting & Atmosphere', dot: 'bg-cyan-400' },
 ];
+
+const COPIED_BTN = 'btn border border-emerald-500/40 bg-emerald-500/15 text-emerald-200';
 
 const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format = PromptFormat.SD }) => {
   const [copiedType, setCopiedType] = useState<string | null>(null);
@@ -78,129 +80,114 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
   };
 
   const categories = format === PromptFormat.NAI ? NAI_CATEGORIES : SD_CATEGORIES;
+  const isNai = format === PromptFormat.NAI;
+  const panel = 'card flex h-full min-h-[420px] flex-col overflow-hidden lg:min-h-0';
+  const copyLabel = (type: string, idle: string) => (copiedType === type ? '已複製' : idle);
 
   if (loading) {
     return (
-      <div className="h-full min-h-[460px] flex flex-col items-center justify-center text-slate-500 animate-pulse bg-slate-900 rounded-xl border border-slate-800 p-8">
-        <div className="relative mb-4">
-          <Terminal size={48} className="text-blue-500 opacity-60 animate-bounce" />
-          <Sparkles size={20} className="text-purple-400 absolute -top-1 -right-1 animate-spin" />
+      <div className={panel} aria-busy="true">
+        <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+          <Sparkles size={15} className="animate-pulse text-violet-300" />
+          <span className="text-sm font-semibold text-slate-200">
+            正在依 {isNai ? 'NovelAI' : 'Stable Diffusion'} 規範生成…
+          </span>
         </div>
-        <p className="text-slate-300 font-semibold text-base">正在依據 {format === PromptFormat.NAI ? 'NovelAI' : 'Stable Diffusion'} 規範生成標籤...</p>
-        <p className="text-xs mt-2 text-slate-500 text-center max-w-sm">
-          {format === PromptFormat.NAI 
-            ? '正在建構 Danbooru 格式標籤、花括號權重與高品質年份語義' 
-            : '正在計算 SD 權重 (tag:weight) 與高解析度品質標籤'}
-        </p>
+        <div className="flex-1 space-y-4 p-4">
+          {Array.from({ length: isNai ? 8 : 6 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="skeleton h-3 w-24" />
+              <div className="skeleton h-9" style={{ width: `${70 + ((i * 37) % 30)}%` }} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (!content) {
     return (
-      <div className="h-full min-h-[460px] flex flex-col items-center justify-center text-slate-500 bg-slate-900 rounded-xl border border-slate-800 border-dashed p-8">
-        <Terminal size={48} className="mb-4 opacity-30 text-slate-600" />
-        <p className="font-semibold text-slate-400">準備就緒</p>
-        <p className="text-xs mt-2 text-slate-500 text-center max-w-xs">
-          輸入創意、上傳圖片或指定畫師，點擊「生成」後結果將即時呈現在此
+      <div className={`${panel} items-center justify-center border-dashed p-8 text-center`}>
+        <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 ring-1 ring-white/10">
+          <Terminal size={24} className="text-violet-300" />
+        </div>
+        <p className="text-sm font-semibold text-slate-200">結果會顯示在這裡</p>
+        <p className="mt-1.5 max-w-xs text-xs leading-relaxed text-slate-500">
+          輸入畫面需求或附上參考圖片，按「生成提示詞」後，分類好的標籤與負面提示詞會出現在此，可逐段複製。
         </p>
       </div>
     );
   }
 
   return (
-    <div className="relative group bg-slate-900 rounded-xl border border-slate-800 shadow-2xl flex flex-col h-full min-h-[460px]">
+    <div className={panel}>
       {/* Top action bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-slate-950 border-b border-slate-800 rounded-t-xl">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
         <div className="flex items-center gap-2">
-          <Layers size={15} className="text-blue-400" />
-          <span className="text-sm font-semibold text-slate-200">
-            標籤生成結果
-          </span>
-          <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${
-            format === PromptFormat.NAI
-              ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-              : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
-          }`}>
-            {format === PromptFormat.NAI ? 'NovelAI (花括號增強)' : 'SD (圓括號權重)'}
+          <Layers size={15} className="text-violet-300" />
+          <span className="text-sm font-semibold text-slate-100">生成結果</span>
+          <span className={`chip ${isNai ? 'border-violet-500/30 bg-violet-500/10 text-violet-200' : 'border-sky-500/30 bg-sky-500/10 text-sky-200'}`}>
+            {isNai ? 'NovelAI' : 'Stable Diffusion'}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => copyToClipboard(rawPositiveText || fullCleanText, 'positive')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              copiedType === 'positive'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-            }`}
+            className={copiedType === 'positive' ? COPIED_BTN : 'btn-primary'}
           >
             {copiedType === 'positive' ? <Check size={13} /> : <Copy size={13} />}
-            {copiedType === 'positive' ? '已複製正面' : '複製正面提示詞'}
+            {copyLabel('positive', '複製正面提示詞')}
           </button>
 
           {negativeText && (
             <button
               type="button"
               onClick={() => copyToClipboard(negativeText, 'negative')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                copiedType === 'negative'
-                  ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-              }`}
+              className={copiedType === 'negative' ? COPIED_BTN : 'btn-ghost'}
             >
               {copiedType === 'negative' ? <Check size={13} /> : <ShieldAlert size={13} />}
-              {copiedType === 'negative' ? '已複製負面' : '複製負面詞'}
+              {copyLabel('negative', '複製負面')}
             </button>
           )}
 
           <button
             type="button"
             onClick={() => copyToClipboard(fullCleanText, 'all')}
-            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              copiedType === 'all'
-                ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                : 'bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700/60'
-            }`}
+            className={copiedType === 'all' ? COPIED_BTN : 'btn-ghost'}
             title="複製完整輸出"
           >
             {copiedType === 'all' ? <Check size={13} /> : <Cpu size={13} />}
-            完整代碼
+            {copyLabel('all', '全部')}
           </button>
         </div>
       </div>
 
       {/* Main output list */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-slate-700">
-        {/* Positive prompt segments */}
+      <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {positiveSegments.map((segment, index) => {
-          const category = categories[index] || {
-            label: `標籤分段 ${index + 1}`,
-            color: 'text-slate-400',
-            border: 'border-slate-700',
-            bg: 'bg-slate-800/50'
-          };
-
+          const category = categories[index] || { label: `標籤分段 ${index + 1}`, en: '', dot: 'bg-slate-500' };
+          const key = `seg-${index}`;
           return (
-            <div
-              key={index}
-              className={`p-3 rounded-xl border ${category.border} ${category.bg} transition-all hover:bg-opacity-70 group/item relative`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className={`text-[11px] font-bold uppercase tracking-wider ${category.color}`}>
+            <div key={index} className="group rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 transition-colors hover:border-white/10 hover:bg-white/[0.035]">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-slate-300">
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${category.dot}`} />
                   {category.label}
+                  {category.en && <span className="truncate font-normal uppercase tracking-wider text-slate-500">{category.en}</span>}
                 </span>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(segment, `seg-${index}`)}
-                  className="opacity-0 group-hover/item:opacity-100 text-[10px] text-slate-400 hover:text-white flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 transition-opacity"
+                  onClick={() => copyToClipboard(segment, key)}
+                  className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-slate-400 transition-opacity hover:bg-white/5 hover:text-white sm:opacity-0 sm:focus:opacity-100 sm:group-hover:opacity-100"
+                  aria-label={`複製${category.label}`}
                 >
-                  {copiedType === `seg-${index}` ? <Check size={10} /> : <Copy size={10} />}
-                  {copiedType === `seg-${index}` ? '已複製' : '單行複製'}
+                  {copiedType === key ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                  {copyLabel(key, '複製')}
                 </button>
               </div>
-              <div className="font-mono text-xs leading-relaxed text-slate-200 break-words select-all">
+              <div className="select-all break-words font-mono text-[12.5px] leading-relaxed text-slate-200">
                 {segment}
               </div>
             </div>
@@ -209,29 +196,29 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
 
         {/* Negative prompt block */}
         {negativeText && (
-          <div className="mt-4 p-3 rounded-xl border border-red-500/20 bg-red-950/15">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+          <div className="mt-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.05] p-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-rose-300">
                 <ShieldAlert size={13} />
-                {format === PromptFormat.NAI ? 'NovelAI 負面提示詞 (Undesired Content)' : 'SD 負面提示詞 (Negative Prompt)'}
+                {isNai ? '負面提示詞（Undesired Content）' : '負面提示詞（Negative Prompt）'}
               </span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(negativeText, 'negative-box')}
-                className="text-[10px] text-rose-300 hover:text-white flex items-center gap-1 px-2 py-0.5 rounded bg-red-900/40 border border-red-500/30 transition-colors"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-rose-300 hover:bg-rose-500/10 hover:text-white"
               >
                 {copiedType === 'negative-box' ? <Check size={11} /> : <Copy size={11} />}
-                {copiedType === 'negative-box' ? '已複製負面' : '複製負面詞'}
+                {copyLabel('negative-box', '複製')}
               </button>
             </div>
-            <div className="font-mono text-xs leading-relaxed text-slate-300 break-words select-all">
+            <div className="select-all break-words font-mono text-[12.5px] leading-relaxed text-slate-300">
               {negativeText}
             </div>
           </div>
         )}
 
         {positiveSegments.length === 0 && !negativeText && (
-          <div className="text-slate-400 text-xs font-mono p-3 bg-slate-800/40 rounded-lg whitespace-pre-wrap">
+          <div className="whitespace-pre-wrap rounded-xl bg-white/[0.03] p-3 font-mono text-xs text-slate-300">
             {fullCleanText}
           </div>
         )}

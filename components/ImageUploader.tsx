@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon } from 'lucide-react';
+import { X, ImagePlus, Crop } from 'lucide-react';
+import ImageCropperModal from './ImageCropperModal';
 
 interface ImageUploaderProps {
   selectedImage: string | null;
@@ -8,11 +9,12 @@ interface ImageUploaderProps {
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageChange }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isCropOpen, setIsCropOpen] = useState(false);
 
   // Helper to read file as base64
   const processFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       onImageChange(reader.result as string);
@@ -42,6 +44,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
     if (e.target.files && e.target.files[0]) {
       processFile(e.target.files[0]);
     }
+    e.target.value = '';
   };
 
   // Handle Paste
@@ -63,49 +66,60 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
 
   if (selectedImage) {
     return (
-      <div className="relative group w-full h-24 bg-slate-800 rounded-lg border border-slate-700 overflow-hidden flex items-center justify-center">
-        <img 
-          src={selectedImage} 
-          alt="Preview" 
-          className="h-full w-full object-contain"
-        />
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <button 
-            onClick={() => onImageChange(null)}
-            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full scale-75"
-            title="移除圖片"
-          >
-            <X size={20} />
-          </button>
+      <>
+        <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-slate-950/50 p-2">
+          <img
+            src={selectedImage}
+            alt="參考圖片預覽"
+            className="h-16 w-16 shrink-0 rounded-lg bg-slate-900 object-cover"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-slate-200">已附上參考圖片</p>
+            <p className="text-[11px] text-slate-500">生成時 AI 會解析構圖、色彩與角色特徵</p>
+          </div>
+          <div className="flex shrink-0 gap-1">
+            <button type="button" onClick={() => setIsCropOpen(true)} className="icon-btn h-8 w-8" title="裁切圖片" aria-label="裁切圖片">
+              <Crop size={14} />
+            </button>
+            <button type="button" onClick={() => onImageChange(null)}
+              className="icon-btn h-8 w-8 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300" title="移除圖片" aria-label="移除圖片">
+              <X size={15} />
+            </button>
+          </div>
         </div>
-      </div>
+        <ImageCropperModal
+          isOpen={isCropOpen}
+          imageSrc={selectedImage}
+          onClose={() => setIsCropOpen(false)}
+          onCropComplete={(cropped) => {
+            onImageChange(cropped);
+            setIsCropOpen(false);
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <div
+    <label
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`relative w-full h-24 border-2 border-dashed rounded-lg transition-colors duration-200 flex flex-col items-center justify-center cursor-pointer
-        ${isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-slate-600 hover:border-slate-500 hover:bg-slate-800/50'}
-      `}
+      className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-3 transition-colors focus-within:ring-2 focus-within:ring-violet-400/60 ${
+        isDragging
+          ? 'border-violet-400 bg-violet-500/10'
+          : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+      }`}
     >
-      <input 
-        type="file" 
-        accept="image/*" 
-        onChange={handleFileInput}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-      />
-      <div className="flex flex-col items-center text-slate-400 pointer-events-none">
-        <div className="p-1.5 bg-slate-800 rounded-full mb-1">
-            <ImageIcon size={18} />
-        </div>
-        <p className="text-xs text-center leading-tight">
-          <span className="font-semibold text-blue-400">點擊</span>/拖放/貼上圖片
-        </p>
-      </div>
-    </div>
+      <input type="file" accept="image/*" onChange={handleFileInput} className="sr-only" />
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.04] text-slate-400">
+        <ImagePlus size={17} />
+      </span>
+      <span className="min-w-0 text-xs text-slate-400">
+        <span className="font-medium text-violet-300">選擇圖片</span>、拖放或直接貼上（Ctrl+V）
+        <span className="block text-[11px] text-slate-500">附上參考圖，讓 AI 反推提示詞</span>
+      </span>
+    </label>
   );
 };
 

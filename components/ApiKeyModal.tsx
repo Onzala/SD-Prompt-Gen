@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { KeyRound, X, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { useEscape } from '../hooks/useEscape';
 
 interface ApiKeyModalProps {
   isOpen: boolean;
@@ -16,12 +17,17 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
     if (isOpen) setValue(currentKey);
   }, [isOpen, currentKey]);
 
+  useEscape(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={onClose}>
       <div
-        className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label="設定 Gemini API 金鑰"
+        className="card w-full max-w-md bg-slate-900 shadow-2xl p-5 space-y-4 animate-pop-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -29,7 +35,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
             <KeyRound size={16} className="text-amber-400" />
             設定 Gemini API 金鑰
           </h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white">
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white" aria-label="關閉">
             <X size={18} />
           </button>
         </div>
@@ -46,7 +52,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
             onKeyDown={(e) => e.key === 'Enter' && onSave(value.trim())}
             placeholder="AIza..."
             autoFocus
-            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 pr-10 text-sm text-slate-200 font-mono focus:outline-none focus:border-blue-500/60"
+            className="input pr-10 font-mono"
           />
           <button
             type="button"
@@ -62,7 +68,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
           href="https://aistudio.google.com/apikey"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+          className="inline-flex items-center gap-1 text-xs text-violet-300 hover:text-violet-200"
         >
           到 Google AI Studio 取得金鑰 <ExternalLink size={12} />
         </a>
@@ -72,7 +78,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
             type="button"
             onClick={() => onSave('')}
             disabled={!currentKey}
-            className="px-3 py-2 text-xs rounded-lg border border-slate-700 text-slate-400 hover:text-red-300 hover:border-red-500/40 disabled:opacity-40 disabled:hover:text-slate-400 disabled:hover:border-slate-700"
+            className="btn-ghost h-9 hover:border-rose-500/40 hover:text-rose-300"
           >
             清除金鑰
           </button>
@@ -80,7 +86,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
             type="button"
             onClick={() => onSave(value.trim())}
             disabled={!value.trim()}
-            className="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:bg-slate-800 disabled:text-slate-600"
+            className="btn-primary h-9 px-4"
           >
             儲存
           </button>
