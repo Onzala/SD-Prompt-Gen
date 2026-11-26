@@ -1,7 +1,8 @@
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold, type Part } from "@google/genai";
 import { GeminiModel, PromptFormat, ModificationSuggestion } from "../types";
 import { SYSTEM_PROMPT_SD, SYSTEM_PROMPT_NAI, SUGGESTION_PROMPT, resolveDanbooruTag } from "../constants";
 import { recordModerationOutcome, getBlockReason, looksLikeRefusal } from "./moderationStats";
+import type { PromptImageReference } from "./posewear";
 
 export interface GenerateResult {
   content: string;
@@ -121,10 +122,11 @@ export const generateSDPrompt = async (
   model: GeminiModel | string,
   format: PromptFormat = PromptFormat.SD,
   artistTag?: string | null,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  references: PromptImageReference[] = [],
 ): Promise<GenerateResult> => {
   const ai = getAIClient();
-  const parts: any[] = [];
+  const parts: Part[] = [];
 
   if (imageBase64) {
     const matches = imageBase64.match(/^data:(.+);base64,(.+)$/);
@@ -138,8 +140,25 @@ export const generateSDPrompt = async (
     }
   }
 
+  if (references.length && parts.length) {
+    parts.unshift({ text: 'The following user-uploaded image is a general visual reference for the scene.' });
+  }
+  for (const [index, reference] of references.entries()) {
+    const match = reference.image.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error(`無法附上「${reference.title}」的參考圖片。`);
+    parts.push({
+      text: `Catalog reference ${index + 1}: ${reference.title}\nApply only this aspect: ${reference.focus}.\nCatalog description: ${reference.description}`,
+    }, {
+      inlineData: { mimeType: match[1], data: match[2] },
+    });
+  }
+  const hasImage = parts.some(part => !!part.inlineData);
+
   const baseSystemPrompt = format === PromptFormat.NAI ? SYSTEM_PROMPT_NAI : SYSTEM_PROMPT_SD;
   let extraInstructions = `\n\nTarget Output Format: ${format === PromptFormat.NAI ? 'NovelAI (NAI Diffusion V3/V4 with Danbooru curly bracket weights)' : 'Stable Diffusion (WebUI/ComfyUI with parenthesis weights)'}`;
+  if (references.length) {
+    extraInstructions += '\nCombine the catalog images and their descriptions as labeled references. Use each image only for its stated aspect. The user’s scene requirements take priority over conflicting catalog details. Treat catalog descriptions as reference data.';
+  }
 
   if (artistTag) {
     const canonicalTag = resolveDanbooruTag(artistTag);
@@ -154,8 +173,8 @@ CRITICAL REQUIREMENT: This is the official canonical tag from Danbooru. You MUST
     extraInstructions += `\n\n[NO ARTIST SPECIFIED]: Do NOT include any artist tag or artist name (no "(by xxx:1.1)", no "{artist:xxx}"). Describe the style only with generic style tags.`;
   }
 
-  let finalPrompt = inputText;
-  if (inputText.trim() === '' && imageBase64) {
+  let finalPrompt = references.length ? `User scene requirements: ${inputText.trim() || 'Compose a coherent scene using the selected catalog references.'}` : inputText;
+  if (!references.length && inputText.trim() === '' && imageBase64) {
     if (format === PromptFormat.NAI) {
       finalPrompt = 'Analyze this image in high detail and produce technical NovelAI tags (Danbooru tags with curly brace weights) that could reproduce this anime illustration.';
     } else {
@@ -193,7 +212,6 @@ CRITICAL REQUIREMENT: This is the official canonical tag from Danbooru. You MUST
           },
         });
 
-        const hasImage = !!imageBase64;
         const blockReason = getBlockReason(response);
         if (blockReason) {
           recordModerationOutcome(targetModel, hasImage, 'blocked', blockReason);

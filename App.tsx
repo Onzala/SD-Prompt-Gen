@@ -10,6 +10,8 @@ import OutputDisplay from './components/OutputDisplay';
 import HistorySidebar from './components/HistorySidebar';
 import ApiKeyModal from './components/ApiKeyModal';
 import ModerationStatsModal from './components/ModerationStatsModal';
+import PoseWearLibrary from './components/PoseWearLibrary';
+import { preparePoseWearReference, type SelectedPoseWearReference } from './services/posewear';
 
 const App: React.FC = () => {
   const [model, setModel] = useState<GeminiModel | string>(GeminiModel.FLASH_LITE_LATEST);
@@ -17,6 +19,8 @@ const App: React.FC = () => {
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [poseWearReferences, setPoseWearReferences] = useState<SelectedPoseWearReference[]>([]);
+  const [showAdultReferences, setShowAdultReferences] = useState(false);
   const [generatedContent, setGeneratedContent] = useState('');
   const [suggestions, setSuggestions] = useState<ModificationSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,10 +67,10 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = async (customText?: string) => {
+    if (abortControllerRef.current) return;
     const textToUse = customText || inputText;
-    // 如果既沒有文字也沒有圖片，才阻止
-    if (!textToUse.trim() && !selectedImage && !selectedArtist) {
-      setError("請提供文字描述、參考圖片，或指定畫師風格。");
+    if (!textToUse.trim() && !selectedImage && !selectedArtist && !poseWearReferences.length) {
+      setError("請提供文字描述、參考圖片、素材庫參考或畫師風格。");
       return;
     }
     if (!apiKey) {
@@ -84,14 +88,19 @@ const App: React.FC = () => {
     abortControllerRef.current = controller;
 
     try {
+      const references = await Promise.all(poseWearReferences.map(entry =>
+        preparePoseWearReference(entry, controller.signal),
+      ));
       const { content, fallbackNotice } = await generateSDPrompt(
         textToUse,
         selectedImage,
         model,
         format,
         selectedArtist,
-        controller.signal
+        controller.signal,
+        references,
       );
+      if (controller.signal.aborted) return;
       setGeneratedContent(content);
       if (fallbackNotice) {
         setNotice(fallbackNotice);
@@ -104,20 +113,22 @@ const App: React.FC = () => {
         inputText: textToUse,
         generatedContent: content,
         model: model,
-        hasImage: !!selectedImage,
+        hasImage: !!selectedImage || references.length > 0,
         format: format,
-        artist: selectedArtist || undefined
+        artist: selectedArtist || undefined,
+        poseWearReferences: poseWearReferences.length ? poseWearReferences.map(entry => entry.reference) : undefined,
       };
       setHistory(prev => [newItem, ...prev].slice(0, 50));
 
       // 異步生成建議
       setLoadingSuggestions(true);
       const newSuggestions = await getRefinementSuggestions(content, format, controller.signal);
+      if (controller.signal.aborted) return;
       setSuggestions(newSuggestions);
       setLoadingSuggestions(false);
 
     } catch (err: any) {
-      if (err.message === "GenerationCancelled") {
+      if (controller.signal.aborted || err.message === "GenerationCancelled") {
         return;
       }
       if (err.message?.includes("Requested entity was not found")) {
@@ -129,6 +140,7 @@ const App: React.FC = () => {
       if (abortControllerRef.current === controller) {
         setLoading(false);
         abortControllerRef.current = null;
+        controller.abort();
       }
     }
   };
@@ -143,13 +155,13 @@ const App: React.FC = () => {
   const handleChatSubmit = () => {
     if (loading) {
       handleStop();
-    } else if (inputText.trim() || selectedImage || selectedArtist) {
+    } else if (inputText.trim() || selectedImage || selectedArtist || poseWearReferences.length) {
       handleGenerate();
     }
   };
 
   // 判斷按鈕是否應該禁用
-  const isSendDisabled = !loading && !inputText.trim() && !selectedImage && !selectedArtist;
+  const isSendDisabled = !loading && !inputText.trim() && !selectedImage && !selectedArtist && !poseWearReferences.length;
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
@@ -263,6 +275,17 @@ const App: React.FC = () => {
              </label>
              <ImageUploader selectedImage={selectedImage} onImageChange={setSelectedImage} />
           </div>
+
+          <PoseWearLibrary
+            selected={poseWearReferences}
+            onChange={setPoseWearReferences}
+            showAdult={showAdultReferences}
+            onShowAdultChange={enabled => {
+              setShowAdultReferences(enabled);
+              if (!enabled) setPoseWearReferences(current => current.filter(entry => !entry.reference.adult));
+            }}
+            disabled={loading}
+          />
 
           {/* 5. Prompt / Requirement Input */}
           <div className="space-y-1.5">
@@ -442,10 +465,14 @@ const App: React.FC = () => {
         onClose={() => setIsHistoryOpen(false)}
         history={history}
         onSelect={(item) => {
+            if (loading) handleStop();
             setInputText(item.inputText);
             setModel(item.model);
             if (item.format) setFormat(item.format);
             if (item.artist) setSelectedArtist(item.artist);
+            setPoseWearReferences((item.poseWearReferences ?? [])
+              .filter(reference => showAdultReferences || !reference.adult)
+              .map(reference => ({ reference })));
             setGeneratedContent(item.generatedContent);
             setIsHistoryOpen(false);
         }}

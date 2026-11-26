@@ -1,3 +1,5 @@
+import type { PoseWearReference } from './services/posewear';
+
 export enum GeminiModel {
   FLASH_LITE_LATEST = 'gemini-flash-lite-latest',
   FLASH_3_8 = 'gemini-3.8-flash',
@@ -39,6 +41,7 @@ export interface HistoryItem {
   hasImage: boolean;
   format?: PromptFormat;
   artist?: string;
+  poseWearReferences?: PoseWearReference[];
 }
 
 export interface ModificationSuggestion {
