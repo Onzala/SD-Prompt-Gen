@@ -27,13 +27,11 @@ const OPTIONS = [
 ];
 
 const FormatSelector: React.FC<FormatSelectorProps> = ({ currentFormat, onFormatChange, disabled }) => {
-  const current = OPTIONS.find(o => o.id === currentFormat) || OPTIONS[0];
-
   return (
-    <div>
+    <div className="min-w-0">
       <div className="field-label" id="format-label">輸出格式</div>
       <div role="radiogroup" aria-labelledby="format-label"
-        className="grid grid-cols-2 gap-1 rounded-xl border border-fg/[0.06] bg-slate-950/50 p-1">
+        className="grid h-11 grid-cols-2 gap-1 rounded-xl border border-fg/[0.06] bg-slate-950/50 p-1">
         {OPTIONS.map(option => {
           const selected = option.id === currentFormat;
           return (
@@ -44,19 +42,19 @@ const FormatSelector: React.FC<FormatSelectorProps> = ({ currentFormat, onFormat
               aria-checked={selected}
               disabled={disabled}
               onClick={() => onFormatChange(option.id)}
-              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+              title={option.help}
+              className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                 selected ? option.active : 'text-slate-400 hover:bg-fg/[0.04] hover:text-slate-200'
               }`}
             >
-              {option.name}
-              <span className={`hidden rounded px-1.5 py-0.5 font-mono text-[10px] font-medium sm:inline ${selected ? option.badge : 'bg-fg/5 text-slate-500'}`}>
+              <span className="truncate">{option.id === PromptFormat.SD ? 'SD' : 'NovelAI'}<span className="hidden 2xl:inline">{option.id === PromptFormat.SD ? ' (Stable Diffusion)' : ''}</span></span>
+              <span className={`hidden rounded px-1.5 py-0.5 font-mono text-[10px] font-medium xl:inline ${selected ? option.badge : 'bg-fg/5 text-slate-500'}`}>
                 {option.syntax}
               </span>
             </button>
           );
         })}
       </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-slate-500">{current.help}</p>
     </div>
   );
 };

@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { GeminiModel } from '../types';
 import { Zap, Brain, Cpu, Sparkles, ChevronDown, Check } from 'lucide-react';
+import Popover from './Popover';
 
 interface ModelOption {
   id: GeminiModel;
@@ -68,66 +69,35 @@ const MODEL_OPTIONS: ModelOption[] = [
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChange, disabled }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedOption = MODEL_OPTIONS.find(m => m.id === currentModel) || MODEL_OPTIONS[0];
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
-    <div className="relative w-full" ref={containerRef}>
-      {/* Dropdown trigger button */}
+    <>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-          isOpen 
-            ? 'border-violet-500/60 ring-2 ring-violet-500/20 bg-slate-900' 
-            : 'border-fg/[0.08] hover:border-fg/15 bg-slate-950/50 hover:bg-fg/[0.03]'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        className={`flex h-11 w-full items-center gap-2.5 rounded-xl border px-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+          isOpen
+            ? 'border-violet-500/60 bg-slate-900 ring-2 ring-violet-500/20'
+            : 'border-fg/[0.08] bg-slate-950/50 hover:border-fg/15 hover:bg-fg/[0.03]'
+        }`}
       >
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="p-2 rounded-lg bg-slate-800 border border-fg/[0.08] flex items-center justify-center shrink-0">
-            {selectedOption.icon}
-          </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-200 text-sm truncate">
-                {selectedOption.name}
-              </span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${selectedOption.badgeColor}`}>
-                {selectedOption.badge}
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-500 font-mono truncate">
-              {selectedOption.modelId}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center pl-2 text-slate-400">
-          <ChevronDown 
-            size={18} 
-            className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-violet-400' : ''}`} 
-          />
-        </div>
+        <span className="shrink-0">{selectedOption.icon}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-100">{selectedOption.name}</span>
+        <ChevronDown size={16} className={`shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-violet-400' : ''}`} />
       </button>
 
-      {/* Dropdown menu */}
-      {isOpen && (
-        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900/95 border border-fg/[0.08] rounded-xl shadow-2xl p-1.5 space-y-1 backdrop-blur-xl animate-pop-in">
-          <div className="px-2.5 py-1.5 text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-            選擇 Gemini 核心模型
-          </div>
+      <Popover open={isOpen} onClose={() => setIsOpen(false)} anchorRef={triggerRef} minWidth={380} label="選擇 Gemini 模型">
+        <div className="px-3 pt-3 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+          選擇 Gemini 模型
+        </div>
+        <div className="space-y-0.5 overflow-y-auto p-1.5 pt-0">
           {MODEL_OPTIONS.map((option) => {
             const isSelected = option.id === selectedOption.id;
             return (
@@ -138,42 +108,26 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onModelChan
                   onModelChange(option.id);
                   setIsOpen(false);
                 }}
-                className={`w-full flex items-start gap-3 p-2.5 rounded-lg text-left transition-all ${
-                  isSelected
-                    ? 'bg-violet-600/15 border border-violet-500/30 text-fg'
-                    : 'hover:bg-slate-800 text-slate-300 border border-transparent'
+                className={`flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
+                  isSelected ? 'bg-violet-500/10 text-fg' : 'text-slate-300 hover:bg-fg/[0.04]'
                 }`}
               >
-                <div className="p-2 rounded-lg bg-slate-800 border border-fg/[0.08] shrink-0 mt-0.5">
-                  {option.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-semibold text-sm text-slate-100 flex items-center gap-2">
-                      {option.name}
-                    </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${option.badgeColor}`}>
-                      {option.badge}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                    {option.description}
-                  </p>
-                  <span className="text-[10px] text-slate-500 font-mono mt-1 block">
-                    ID: {option.modelId}
+                <span className="mt-0.5 shrink-0">{option.icon}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[13px] font-semibold text-slate-100">{option.name}</span>
+                    <span className={`rounded border px-1.5 py-0.5 text-[10px] font-medium ${option.badgeColor}`}>{option.badge}</span>
                   </span>
-                </div>
-                {isSelected && (
-                  <div className="text-violet-400 shrink-0 mt-1">
-                    <Check size={16} />
-                  </div>
-                )}
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-400">{option.description}</span>
+                  <span className="mt-0.5 block font-mono text-[10px] text-slate-500">{option.modelId}</span>
+                </span>
+                {isSelected && <Check size={15} className="mt-1 shrink-0 text-violet-400" />}
               </button>
             );
           })}
         </div>
-      )}
-    </div>
+      </Popover>
+    </>
   );
 };
 

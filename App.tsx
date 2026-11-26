@@ -372,8 +372,8 @@ const App: React.FC = () => {
                 生成設定
               </h2>
             </div>
-            <div className="space-y-4 px-4 pb-4">
-              <div>
+            <div className="grid gap-4 px-4 pb-4 sm:grid-cols-2">
+              <div className="min-w-0">
                 <div className="field-label">Gemini 模型</div>
                 <ModelSelector currentModel={model} onModelChange={setModel} disabled={loading} />
               </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { DANBOORU_ARTISTS, resolveDanbooruTag } from '../constants';
 import { DanbooruArtist, PromptFormat } from '../types';
-import { Palette, Search, X, Check, Globe, Sparkles, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Palette, Search, X, Check, Globe, Sparkles, ExternalLink, ShieldCheck, ChevronDown } from 'lucide-react';
+import Popover from './Popover';
 
 interface ArtistSelectorProps {
   selectedArtist: string | null; // Danbooru tag e.g. "krenz" or "wlop"
@@ -24,18 +25,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
   const [customTagInput, setCustomTagInput] = useState('');
   const [liveResults, setLiveResults] = useState<{ name: string; post_count: number }[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Close when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   // Filter curated artists
   const filteredArtists = useMemo(() => {
@@ -121,80 +111,57 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
   };
 
   return (
-    <div className="relative w-full" ref={containerRef}>
-      {/* Trigger Button */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+    <>
+      {/* 精簡觸發列：點擊開啟懸浮面板 */}
+      <div
+        ref={triggerRef}
+        className={`flex h-11 w-full items-center gap-2.5 rounded-xl border px-3 transition-all ${
           isOpen
-            ? 'border-fuchsia-500/60 ring-2 ring-fuchsia-500/20 bg-slate-900'
+            ? 'border-fuchsia-500/60 bg-slate-900 ring-2 ring-fuchsia-500/20'
             : currentArtistInfo
-              ? 'border-fuchsia-500/50 bg-fuchsia-950/20 hover:border-fuchsia-500'
-              : 'border-fg/[0.08] hover:border-fg/15 bg-slate-950/50 hover:bg-fg/[0.03]'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              ? 'border-fuchsia-500/40 bg-fuchsia-500/[0.06] hover:border-fuchsia-500/60'
+              : 'border-fg/[0.08] bg-slate-950/50 hover:border-fg/15 hover:bg-fg/[0.03]'
+        } ${disabled ? 'opacity-50' : ''}`}
       >
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className={`p-2 rounded-lg border flex items-center justify-center shrink-0 ${
-            currentArtistInfo 
-              ? 'bg-fuchsia-500/20 border-fuchsia-500/40 text-fuchsia-300' 
-              : 'bg-slate-800 border-fg/[0.08] text-slate-400'
-          }`}>
-            <Palette size={16} />
-          </div>
-
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-200 text-sm truncate">
-                {currentArtistInfo ? currentArtistInfo.name : '指定畫師風格'}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setIsOpen(!isOpen)}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+          className="flex min-w-0 flex-1 items-center gap-2.5 self-stretch text-left disabled:cursor-not-allowed"
+        >
+          <Palette size={16} className={`shrink-0 ${currentArtistInfo ? 'text-fuchsia-400' : 'text-slate-400'}`} />
+          {currentArtistInfo ? (
+            <>
+              <span className="min-w-0 truncate text-sm font-medium text-slate-100">{currentArtistInfo.name}</span>
+              <span className="hidden shrink-0 items-center gap-1 rounded border border-fuchsia-500/30 bg-fuchsia-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-fuchsia-300 sm:flex">
+                <ShieldCheck size={11} className="text-emerald-400" />
+                {getSyntaxPreview(currentArtistInfo.tag)}
               </span>
-              {currentArtistInfo ? (
-                <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30 font-mono font-bold">
-                  <ShieldCheck size={11} className="text-emerald-400" />
-                  {getSyntaxPreview(currentArtistInfo.tag)}
-                </span>
-              ) : (
-                <span className="text-[10px] px-1.5 py-0.5 rounded border bg-slate-800 text-slate-400 border-fg/[0.08]">
-                  Danbooru 官方標籤庫
-                </span>
-              )}
-            </div>
-            <span className="text-[11px] text-slate-500 truncate">
-              {currentArtistInfo ? (
-                <>
-                  Danbooru 標籤: <strong className="text-fuchsia-300 font-mono">{currentArtistInfo.tag}</strong>
-                  {currentArtistInfo.postCount ? ` (${currentArtistInfo.postCount} 篇)` : ''} · {currentArtistInfo.description}
-                </>
-              ) : (
-                '不指定 (預設原創風格) 或從 Danbooru 精準抓取官方畫師標籤'
-              )}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 text-slate-400 shrink-0">
-          {currentArtistInfo && (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onArtistChange(null);
-              }}
-              className="p-1 hover:text-red-400 hover:bg-slate-800 rounded-md transition-colors"
-              title="清除指定畫師"
-            >
-              <X size={15} />
-            </span>
+            </>
+          ) : (
+            <span className="min-w-0 truncate text-sm text-slate-400">不指定（預設原創風格）</span>
           )}
-          <span className="text-xs text-fuchsia-400 font-medium ml-1">
-            {isOpen ? '收起' : '選擇'}
-          </span>
-        </div>
-      </button>
+          <span className="flex-1" />
+        </button>
+        {currentArtistInfo && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onArtistChange(null)}
+            className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-fg/[0.06] hover:text-rose-400"
+            title="清除指定畫師"
+            aria-label="清除指定畫師"
+          >
+            <X size={15} />
+          </button>
+        )}
+        <ChevronDown size={16} className={`pointer-events-none shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-fuchsia-400' : ''}`} />
+      </div>
 
-      {/* Dropdown Panel */}
-      {isOpen && (
-        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900/95 border border-fg/[0.08] rounded-xl shadow-2xl p-3 backdrop-blur-xl animate-pop-in max-h-[540px] flex flex-col">
+      <Popover open={isOpen} onClose={() => setIsOpen(false)} anchorRef={triggerRef} minWidth={440} maxHeight={560} label="選擇畫師風格">
+        <div className="flex min-h-0 flex-1 flex-col p-3 [&>*:not(.min-h-0)]:shrink-0">
           {/* Header & Verification Info */}
           <div className="flex items-center justify-between pb-2 border-b border-fg/[0.06]">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
@@ -268,7 +235,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
           )}
 
           {/* Artist list scroll area */}
-          <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[250px]">
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-1.5 pr-1">
             {/* Live Danbooru search results if queried and has matches */}
             {searchQuery && liveResults.length > 0 && (
               <div className="mb-2 p-2 rounded-lg bg-fuchsia-950/30 border border-fuchsia-500/30">
@@ -424,8 +391,8 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
             </div>
           </div>
         </div>
-      )}
-    </div>
+      </Popover>
+    </>
   );
 };
 

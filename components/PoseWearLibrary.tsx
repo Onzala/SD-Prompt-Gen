@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { ExternalLink, Images, Plus, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ExternalLink, Images, Plus, X, ChevronRight } from 'lucide-react';
+import { useEscape } from '../hooks/useEscape';
 import {
   loadPoseWearCatalog, poseWearCollections, poseWearSource, referenceName,
   type PoseWearCollection, type PoseWearGroup, type PoseWearItem, type SelectedPoseWearReference,
@@ -35,7 +37,7 @@ function CatalogCard({ item, alternate, disabled, onSelect }: {
     setShowAlternate(!showAlternate);
   }
   return (
-    <article className="min-w-0 overflow-hidden rounded-lg border border-fg/[0.06] bg-slate-950">
+    <article className="min-w-0 overflow-hidden rounded-lg border border-fg/[0.06] bg-slate-950/50">
       <a href={poseWearSource(active)} target="_blank" rel="noreferrer" aria-label={`查看「${active.title}」來源`}>
         <img src={view.thumbnailUrl} alt={active.title} loading="lazy" referrerPolicy="no-referrer"
           className="aspect-[4/3] w-full bg-slate-900 object-contain" />
@@ -75,6 +77,8 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
   const [collection, setCollection] = useState<PoseWearCollection | ''>('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  useEscape(isOpen, () => setIsOpen(false));
 
   async function openCatalog() {
     if (items || loading) return;
@@ -122,13 +126,35 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
   const groupCollections = collections.filter(id => poseWearCollections[id].group === group);
 
   return (
-    <section aria-label="參考素材庫" className="rounded-xl border border-fg/[0.06] bg-slate-950/40 p-3">
-      <details onToggle={e => { if (e.currentTarget.open) void openCatalog(); }}>
-        <summary className="cursor-pointer select-none rounded-md text-[13px] font-medium text-slate-200 marker:text-slate-500">
-          <Images size={15} className="mr-1.5 inline text-violet-400" aria-hidden="true" />參考素材庫
-          <span className="ml-2 text-xs font-normal text-slate-400">姿勢、服裝、表情、髮型</span>
-        </summary>
-        <div className="mt-3 space-y-3">
+    <section aria-label="參考素材庫">
+      <div className="field-label">
+        <span>參考素材庫</span>
+        {selected.length > 0 && <span className="text-violet-300">已選 {selected.length} 項</span>}
+      </div>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => { setIsOpen(true); void openCatalog(); }}
+        aria-haspopup="dialog"
+        className="flex h-11 w-full items-center gap-2.5 rounded-xl border border-fg/[0.08] bg-slate-950/50 px-3 text-left transition-all hover:border-fg/15 hover:bg-fg/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Images size={16} className="shrink-0 text-violet-400" />
+        <span className="min-w-0 flex-1 truncate text-sm text-slate-400">姿勢、服裝、表情、髮型</span>
+        <ChevronRight size={16} className="shrink-0 text-slate-400" />
+      </button>
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex animate-fade-in items-end justify-center bg-black/60 p-2 backdrop-blur-sm sm:items-center sm:p-4"
+          onMouseDown={e => { if (e.target === e.currentTarget) setIsOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-label="參考素材庫"
+            className="flex max-h-[85vh] w-full max-w-3xl animate-pop-in flex-col overflow-hidden rounded-2xl border border-fg/[0.08] bg-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between gap-2 border-b border-fg/[0.06] px-4 py-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
+                <Images size={16} className="text-violet-400" /> 參考素材庫
+                {selected.length > 0 && <span className="chip border-violet-500/30 bg-violet-500/10 text-violet-200">已選 {selected.length} 項</span>}
+              </h3>
+              <button type="button" onClick={() => setIsOpen(false)} className="btn-primary h-8 px-4">完成</button>
+            </div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-1.5" aria-label="素材類型">
               {groups.map(option => (
@@ -168,7 +194,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
             <>
               <p role="status" className="text-xs text-slate-400">共 {filtered.length.toLocaleString('zh-TW')} 筆</p>
               <div key={`${group}/${collection}/${query}/${currentPage}/${showAdult}`}
-                className="grid max-h-[28rem] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {filtered.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(item => (
                   <CatalogCard key={`${item.collection}/${item.id}`} item={item}
                     alternate={group === '姿勢' ? posePairs.get(`${item.collection === 'pose' ? 'depth' : 'pose'}/${item.id}`) : undefined}
@@ -192,17 +218,20 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
               target="_blank" rel="noreferrer" className="underline">原作者與素材授權</a>
           </p>
         </div>
-      </details>
+          </div>
+        </div>,
+        document.body,
+      )}
       {selected.length > 0 && (
-        <div className="mt-3 space-y-2">
-          <p className="text-xs text-slate-400">已選 {selected.length} 項。生成時會把各項圖片及描述一併送交 Gemini。</p>
+        <div className="mt-2 space-y-2">
+          <p className="text-[11px] text-slate-500">生成時會把各項圖片及描述一併送交 Gemini。</p>
           {selected.map(({ reference, replacement }, index) => {
             const name = referenceName(reference);
             const updateFile = (file?: File) => onChange(selected.map((entry, i) =>
               i === index ? { reference, replacement: file } : entry,
             ));
             return (
-              <div key={`${reference.collection}/${reference.id}`} className="rounded-lg border border-fg/[0.06] bg-slate-950 p-2">
+              <div key={`${reference.collection}/${reference.id}`} className="rounded-lg border border-fg/[0.06] bg-slate-950/50 p-2">
                 <div className="flex items-start gap-2">
                   <img src={reference.view.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer"
                     className="h-10 w-10 shrink-0 rounded bg-slate-900 object-contain" />
