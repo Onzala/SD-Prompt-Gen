@@ -87,7 +87,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
   if (loading) {
     return (
       <div className={panel} aria-busy="true">
-        <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+        <div className="flex items-center gap-2 border-b border-fg/[0.06] px-4 py-3">
           <Sparkles size={15} className="animate-pulse text-violet-300" />
           <span className="text-sm font-semibold text-slate-200">
             正在依 {isNai ? 'NovelAI' : 'Stable Diffusion'} 規範生成…
@@ -108,7 +108,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
   if (!content) {
     return (
       <div className={`${panel} items-center justify-center border-dashed p-8 text-center`}>
-        <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 ring-1 ring-white/10">
+        <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 ring-1 ring-fg/10">
           <Terminal size={24} className="text-violet-300" />
         </div>
         <p className="text-sm font-semibold text-slate-200">結果會顯示在這裡</p>
@@ -122,7 +122,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
   return (
     <div className={panel}>
       {/* Top action bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-fg/[0.06] px-4 py-3">
         <div className="flex items-center gap-2">
           <Layers size={15} className="text-violet-300" />
           <span className="text-sm font-semibold text-slate-100">生成結果</span>
@@ -170,7 +170,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
           const category = categories[index] || { label: `標籤分段 ${index + 1}`, en: '', dot: 'bg-slate-500' };
           const key = `seg-${index}`;
           return (
-            <div key={index} className="group rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 transition-colors hover:border-white/10 hover:bg-white/[0.035]">
+            <div key={index} className="group rounded-xl border border-fg/[0.05] bg-fg/[0.02] p-3 transition-colors hover:border-fg/10 hover:bg-fg/[0.035]">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2 text-[11px] font-semibold text-slate-300">
                   <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${category.dot}`} />
@@ -180,7 +180,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
                 <button
                   type="button"
                   onClick={() => copyToClipboard(segment, key)}
-                  className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-slate-400 transition-opacity hover:bg-white/5 hover:text-white sm:opacity-0 sm:focus:opacity-100 sm:group-hover:opacity-100"
+                  className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-slate-400 transition-opacity hover:bg-fg/5 hover:text-fg sm:opacity-0 sm:focus:opacity-100 sm:group-hover:opacity-100"
                   aria-label={`複製${category.label}`}
                 >
                   {copiedType === key ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
@@ -205,7 +205,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
               <button
                 type="button"
                 onClick={() => copyToClipboard(negativeText, 'negative-box')}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-rose-300 hover:bg-rose-500/10 hover:text-white"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-rose-300 hover:bg-rose-500/10 hover:text-fg"
               >
                 {copiedType === 'negative-box' ? <Check size={11} /> : <Copy size={11} />}
                 {copyLabel('negative-box', '複製')}
@@ -218,7 +218,7 @@ const OutputDisplay: React.FC<OutputDisplayProps> = ({ content, loading, format 
         )}
 
         {positiveSegments.length === 0 && !negativeText && (
-          <div className="whitespace-pre-wrap rounded-xl bg-white/[0.03] p-3 font-mono text-xs text-slate-300">
+          <div className="whitespace-pre-wrap rounded-xl bg-fg/[0.03] p-3 font-mono text-xs text-slate-300">
             {fullCleanText}
           </div>
         )}

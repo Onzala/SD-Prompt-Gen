@@ -132,14 +132,14 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
             ? 'border-fuchsia-500/60 ring-2 ring-fuchsia-500/20 bg-slate-900'
             : currentArtistInfo
               ? 'border-fuchsia-500/50 bg-fuchsia-950/20 hover:border-fuchsia-500'
-              : 'border-white/[0.08] hover:border-white/15 bg-slate-950/50 hover:bg-white/[0.03]'
+              : 'border-fg/[0.08] hover:border-fg/15 bg-slate-950/50 hover:bg-fg/[0.03]'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <div className="flex items-center gap-3 overflow-hidden">
           <div className={`p-2 rounded-lg border flex items-center justify-center shrink-0 ${
             currentArtistInfo 
               ? 'bg-fuchsia-500/20 border-fuchsia-500/40 text-fuchsia-300' 
-              : 'bg-slate-800 border-white/[0.08] text-slate-400'
+              : 'bg-slate-800 border-fg/[0.08] text-slate-400'
           }`}>
             <Palette size={16} />
           </div>
@@ -155,7 +155,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
                   {getSyntaxPreview(currentArtistInfo.tag)}
                 </span>
               ) : (
-                <span className="text-[10px] px-1.5 py-0.5 rounded border bg-slate-800 text-slate-400 border-white/[0.08]">
+                <span className="text-[10px] px-1.5 py-0.5 rounded border bg-slate-800 text-slate-400 border-fg/[0.08]">
                   Danbooru 官方標籤庫
                 </span>
               )}
@@ -194,9 +194,9 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900/95 border border-white/[0.08] rounded-xl shadow-2xl p-3 backdrop-blur-xl animate-pop-in max-h-[540px] flex flex-col">
+        <div className="absolute left-0 right-0 mt-2 z-30 bg-slate-900/95 border border-fg/[0.08] rounded-xl shadow-2xl p-3 backdrop-blur-xl animate-pop-in max-h-[540px] flex flex-col">
           {/* Header & Verification Info */}
-          <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+          <div className="flex items-center justify-between pb-2 border-b border-fg/[0.06]">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
               <Globe size={14} className="text-fuchsia-400" />
               Danbooru 官方畫師標籤庫
@@ -210,7 +210,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
           <div className="my-1.5 px-2.5 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-[11px] text-violet-200 flex items-center gap-2">
             <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
             <span>
-              已確保精準抓取 Danbooru 官方標籤（例如 Krenz Cushart 規範標籤為 <strong className="font-mono text-white underline">krenz</strong>）
+              已確保精準抓取 Danbooru 官方標籤（例如 Krenz Cushart 規範標籤為 <strong className="font-mono text-fg underline">krenz</strong>）
             </span>
           </div>
 
@@ -222,7 +222,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜尋 Danbooru 標籤或畫師名稱 (例如: krenz, wlop, shirabi, 監督)..."
-              className="w-full bg-slate-800/80 border border-white/[0.08] rounded-lg pl-9 pr-8 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors"
+              className="w-full bg-slate-800/80 border border-fg/[0.08] rounded-lg pl-9 pr-8 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors"
             />
             {searchQuery && (
               <button
@@ -288,13 +288,13 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
                         onClick={() => handleSelectArtist(lr.name)}
                         className={`w-full text-left p-2 rounded-lg border transition-all flex items-center justify-between text-xs ${
                           isSelected
-                            ? 'bg-fuchsia-600/30 border-fuchsia-500 text-white font-bold'
-                            : 'bg-slate-800/80 hover:bg-slate-800 border-white/[0.08] hover:border-fuchsia-500/40 text-slate-200'
+                            ? 'bg-fuchsia-600/30 border-fuchsia-500 text-fg font-bold'
+                            : 'bg-slate-800/80 hover:bg-slate-800 border-fg/[0.08] hover:border-fuchsia-500/40 text-slate-200'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-fuchsia-300 font-semibold">{lr.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-white/[0.08]">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-fg/[0.08]">
                             {lr.post_count} 篇作品
                           </span>
                         </div>
@@ -316,8 +316,8 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
                   key={artist.tag}
                   className={`w-full p-2.5 rounded-lg border transition-all flex items-start justify-between gap-2 ${
                     isSelected
-                      ? 'bg-fuchsia-600/20 border-fuchsia-500 text-white'
-                      : 'bg-slate-800/50 hover:bg-slate-800 border-white/[0.06] hover:border-slate-600 text-slate-300'
+                      ? 'bg-fuchsia-600/20 border-fuchsia-500 text-fg'
+                      : 'bg-slate-800/50 hover:bg-slate-800 border-fg/[0.06] hover:border-slate-600 text-slate-300'
                   }`}
                 >
                   <button
@@ -392,7 +392,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
           </div>
 
           {/* Custom Tag Input Bottom Bar */}
-          <div className="pt-2.5 mt-2 border-t border-white/[0.06]">
+          <div className="pt-2.5 mt-2 border-t border-fg/[0.06]">
             <div className="text-[10px] font-medium text-slate-400 mb-1 flex items-center justify-between">
               <span>手動指定 Danbooru 畫師標籤 (系統將自動規範化):</span>
               <a
@@ -411,7 +411,7 @@ const ArtistSelector: React.FC<ArtistSelectorProps> = ({
                 onChange={(e) => setCustomTagInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleApplyCustom()}
                 placeholder="例如輸入 krenz 或 krenz_cushart"
-                className="flex-1 bg-slate-800 border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 font-mono"
+                className="flex-1 bg-slate-800 border border-fg/[0.08] rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 font-mono"
               />
               <button
                 type="button"

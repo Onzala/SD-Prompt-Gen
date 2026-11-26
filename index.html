@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b0c18" />
+    <script>
+      // 在畫面繪製前套用主題：有存過選擇就用存的，否則跟隨系統設定
+      (function () {
+        var theme;
+        try { theme = localStorage.getItem('sd_prompt_theme'); } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <title>AI 繪畫提示詞專家 (SD & NovelAI)</title>
     <meta name="description" content="AI 驅動的提示詞專家，支援 Stable Diffusion 權重語法與 NovelAI Danbooru 標籤公式，提供 Danbooru 名家風格庫與負面詞生成。" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%238b5cf6'/><stop offset='1' stop-color='%234f46e5'/></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23g)'/><path d='M16 7l2.2 6.8L25 16l-6.8 2.2L16 25l-2.2-6.8L7 16l6.8-2.2z' fill='white'/></svg>" />

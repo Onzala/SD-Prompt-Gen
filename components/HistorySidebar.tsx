@@ -63,12 +63,12 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
       )}
 
       {/* Sidebar Panel */}
-      <div className={`fixed inset-y-0 right-0 w-full sm:w-96 bg-slate-900/95 backdrop-blur-xl border-l border-white/[0.06] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed inset-y-0 right-0 w-full sm:w-96 bg-slate-900/95 backdrop-blur-xl border-l border-fg/[0.06] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-white/[0.06] bg-slate-900/50">
+          <div className="flex items-center justify-between p-4 border-b border-fg/[0.06] bg-slate-900/50">
             <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-100">
               <Clock size={20} className="text-violet-400" />
               歷史紀錄
@@ -85,7 +85,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
               )}
               <button 
                 onClick={onClose}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-fg hover:bg-slate-800 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
@@ -104,7 +104,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({
                 <div 
                   key={item.id}
                   onClick={() => onSelect(item)}
-                  className="group relative bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.08] hover:border-slate-600 rounded-xl p-3 cursor-pointer transition-all"
+                  className="group relative bg-fg/[0.02] hover:bg-fg/[0.05] border border-fg/[0.08] hover:border-slate-600 rounded-xl p-3 cursor-pointer transition-all"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
                     <div className="flex items-center gap-1.5">

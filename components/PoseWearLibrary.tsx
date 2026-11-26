@@ -35,7 +35,7 @@ function CatalogCard({ item, alternate, disabled, onSelect }: {
     setShowAlternate(!showAlternate);
   }
   return (
-    <article className="min-w-0 overflow-hidden rounded-lg border border-white/[0.06] bg-slate-950">
+    <article className="min-w-0 overflow-hidden rounded-lg border border-fg/[0.06] bg-slate-950">
       <a href={poseWearSource(active)} target="_blank" rel="noreferrer" aria-label={`查看「${active.title}」來源`}>
         <img src={view.thumbnailUrl} alt={active.title} loading="lazy" referrerPolicy="no-referrer"
           className="aspect-[4/3] w-full bg-slate-900 object-contain" />
@@ -52,7 +52,7 @@ function CatalogCard({ item, alternate, disabled, onSelect }: {
         {active.views.length > 1 && (
           <select value={viewIndex} onChange={e => setViewIndex(Number(e.target.value))}
             aria-label={`${active.title}的視角或變體`} disabled={disabled}
-            className="w-full rounded border border-white/[0.08] bg-slate-900 px-1.5 py-1 text-xs">
+            className="w-full rounded border border-fg/[0.08] bg-slate-900 px-1.5 py-1 text-xs">
             {active.views.map((variant, index) => (
               <option key={variant.imageUrl + index} value={index}>{variant.label || `變體 ${index + 1}`}</option>
             ))}
@@ -122,7 +122,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
   const groupCollections = collections.filter(id => poseWearCollections[id].group === group);
 
   return (
-    <section aria-label="參考素材庫" className="rounded-xl border border-white/[0.06] bg-slate-950/40 p-3">
+    <section aria-label="參考素材庫" className="rounded-xl border border-fg/[0.06] bg-slate-950/40 p-3">
       <details onToggle={e => { if (e.currentTarget.open) void openCatalog(); }}>
         <summary className="cursor-pointer select-none rounded-md text-[13px] font-medium text-slate-200 marker:text-slate-500">
           <Images size={15} className="mr-1.5 inline text-violet-400" aria-hidden="true" />參考素材庫
@@ -134,7 +134,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
               {groups.map(option => (
                 <button key={option} type="button" aria-pressed={group === option}
                   onClick={() => { setGroup(option); setCollection(''); setPage(0); }}
-                  className={`rounded-md border px-2.5 py-1 text-xs ${group === option ? 'border-violet-500/50 bg-violet-500/20 text-violet-200' : 'border-white/[0.08] text-slate-400 hover:text-white'}`}>
+                  className={`rounded-md border px-2.5 py-1 text-xs ${group === option ? 'border-violet-500/50 bg-violet-500/20 text-violet-200' : 'border-fg/[0.08] text-slate-400 hover:text-fg'}`}>
                   {option}
                 </button>
               ))}
@@ -151,12 +151,12 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
           <div className="flex flex-wrap gap-2">
             <input type="search" aria-label="搜尋素材" placeholder="搜尋名稱、描述或編號"
               value={query} onChange={e => { setQuery(e.target.value); setPage(0); }}
-              className="min-w-36 flex-1 rounded-lg border border-white/[0.08] bg-slate-950/60 px-2.5 py-2 text-xs focus:border-violet-500/60 focus:outline-none" />
+              className="min-w-36 flex-1 rounded-lg border border-fg/[0.08] bg-slate-950/60 px-2.5 py-2 text-xs focus:border-violet-500/60 focus:outline-none" />
             {groupCollections.length > 1 && (
               <select aria-label="素材子庫" value={collection} onChange={e => {
                 setCollection(e.target.value as PoseWearCollection | '');
                 setPage(0);
-              }} className="rounded-lg border border-white/[0.08] bg-slate-950 px-2 py-2 text-xs">
+              }} className="rounded-lg border border-fg/[0.08] bg-slate-950 px-2 py-2 text-xs">
                 <option value="">所有子庫</option>
                 {groupCollections.map(id => <option key={id} value={id}>{poseWearCollections[id].label}</option>)}
               </select>
@@ -178,10 +178,10 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
               {pageCount > 1 && (
                 <nav aria-label="素材分頁" className="flex items-center justify-between text-xs text-slate-400">
                   <button type="button" disabled={!currentPage} onClick={() => setPage(currentPage - 1)}
-                    className="rounded border border-white/[0.08] px-2 py-1 disabled:opacity-30">上一頁</button>
+                    className="rounded border border-fg/[0.08] px-2 py-1 disabled:opacity-30">上一頁</button>
                   <span>{currentPage + 1} / {pageCount}</span>
                   <button type="button" disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}
-                    className="rounded border border-white/[0.08] px-2 py-1 disabled:opacity-30">下一頁</button>
+                    className="rounded border border-fg/[0.08] px-2 py-1 disabled:opacity-30">下一頁</button>
                 </nav>
               )}
             </>
@@ -202,7 +202,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
               i === index ? { reference, replacement: file } : entry,
             ));
             return (
-              <div key={`${reference.collection}/${reference.id}`} className="rounded-lg border border-white/[0.06] bg-slate-950 p-2">
+              <div key={`${reference.collection}/${reference.id}`} className="rounded-lg border border-fg/[0.06] bg-slate-950 p-2">
                 <div className="flex items-start gap-2">
                   <img src={reference.view.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer"
                     className="h-10 w-10 shrink-0 rounded bg-slate-900 object-contain" />
@@ -213,9 +213,9 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
                     </p>
                   </div>
                   <a href={reference.view.imageUrl} target="_blank" rel="noreferrer"
-                    aria-label={`開啟「${name}」來源圖片`} className="text-slate-400 hover:text-white"><ExternalLink size={14} /></a>
+                    aria-label={`開啟「${name}」來源圖片`} className="text-slate-400 hover:text-fg"><ExternalLink size={14} /></a>
                   <button type="button" disabled={disabled} onClick={() => onChange(selected.filter((_, i) => i !== index))}
-                    aria-label={`移除「${name}」`} className="text-slate-400 hover:text-white disabled:opacity-40"><X size={15} /></button>
+                    aria-label={`移除「${name}」`} className="text-slate-400 hover:text-fg disabled:opacity-40"><X size={15} /></button>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                   <label className="cursor-pointer text-violet-300 underline">

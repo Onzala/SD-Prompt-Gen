@@ -70,7 +70,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
             <ShieldAlert size={16} className="text-red-400" />
             各模型審查統計
           </h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white" aria-label="關閉">
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-fg" aria-label="關閉">
             <X size={18} />
           </button>
         </div>
@@ -84,7 +84,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
               className={`px-3 py-1.5 text-xs rounded-lg border transition-all ${
                 scope === s
                   ? 'bg-violet-500/15 border-violet-500/40 text-violet-100'
-                  : 'border-white/[0.08] text-slate-400 hover:text-slate-200'
+                  : 'border-fg/[0.08] text-slate-400 hover:text-slate-200'
               }`}
             >
               {SCOPE_LABELS[s]}
@@ -100,7 +100,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-slate-500 border-b border-white/[0.06]">
+                <tr className="text-slate-500 border-b border-fg/[0.06]">
                   <th className="text-left font-medium py-2 pr-2">模型</th>
                   <th className="text-right font-medium py-2 px-2">次數</th>
                   <th className="text-right font-medium py-2 px-2">成功</th>
@@ -112,7 +112,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.model} className="border-b border-white/[0.05] text-slate-300">
+                  <tr key={r.model} className="border-b border-fg/[0.05] text-slate-300">
                     <td className="py-2 pr-2 font-mono text-[11px]" title={r.lastBlockReason ? `最近攔截原因：${r.lastBlockReason}` : undefined}>
                       {r.model}
                     </td>
@@ -143,7 +143,7 @@ const ModerationStatsModal: React.FC<ModerationStatsModalProps> = ({ isOpen, onC
                 setVersion((v) => v + 1);
               }
             }}
-            className="shrink-0 flex items-center gap-1 px-3 py-2 text-xs rounded-lg border border-white/[0.08] text-slate-400 hover:text-red-300 hover:border-red-500/40"
+            className="shrink-0 flex items-center gap-1 px-3 py-2 text-xs rounded-lg border border-fg/[0.08] text-slate-400 hover:text-red-300 hover:border-red-500/40"
           >
             <Trash2 size={12} /> 清除統計
           </button>

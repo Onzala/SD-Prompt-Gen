@@ -35,7 +35,7 @@ const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ isOpen, currentKey, onSave, o
             <KeyRound size={16} className="text-amber-400" />
             設定 Gemini API 金鑰
           </h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white" aria-label="關閉">
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-fg" aria-label="關閉">
             <X size={18} />
           </button>
         </div>

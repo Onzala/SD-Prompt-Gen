@@ -67,7 +67,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
   if (selectedImage) {
     return (
       <>
-        <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-slate-950/50 p-2">
+        <div className="flex items-center gap-3 rounded-xl border border-fg/[0.06] bg-slate-950/50 p-2">
           <img
             src={selectedImage}
             alt="參考圖片預覽"
@@ -108,11 +108,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ selectedImage, onImageCha
       className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-3 transition-colors focus-within:ring-2 focus-within:ring-violet-400/60 ${
         isDragging
           ? 'border-violet-400 bg-violet-500/10'
-          : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+          : 'border-fg/10 hover:border-fg/20 hover:bg-fg/[0.02]'
       }`}
     >
       <input type="file" accept="image/*" onChange={handleFileInput} className="sr-only" />
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/[0.04] text-slate-400">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-fg/[0.04] text-slate-400">
         <ImagePlus size={17} />
       </span>
       <span className="min-w-0 text-xs text-slate-400">

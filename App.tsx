@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, Send, History as HistoryIcon, Lightbulb, Square, RefreshCw, AlertCircle, CheckCircle2,
-  KeyRound, ShieldAlert, SlidersHorizontal, Palette, X, Wand2, ArrowUpRight, Images,
+  KeyRound, ShieldAlert, SlidersHorizontal, Palette, X, Wand2, ArrowUpRight, Images, Sun, Moon,
 } from 'lucide-react';
 import { GeminiModel, PromptFormat, HistoryItem, ModificationSuggestion } from './types';
 import { generateSDPrompt, getRefinementSuggestions, getStoredApiKey, setStoredApiKey } from './services/geminiService';
@@ -15,6 +15,7 @@ import ApiKeyModal from './components/ApiKeyModal';
 import ModerationStatsModal from './components/ModerationStatsModal';
 import PoseWearLibrary from './components/PoseWearLibrary';
 import { preparePoseWearReference, type SelectedPoseWearReference } from './services/posewear';
+import { useTheme } from './hooks/useTheme';
 
 const STOPPED_MESSAGE = '已停止生成。';
 
@@ -40,6 +41,7 @@ const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey());
   const [isApiKeyOpen, setIsApiKeyOpen] = useState(() => !getStoredApiKey());
 
+  const { theme, toggleTheme } = useTheme();
   const outputRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -197,14 +199,14 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-slate-950/75 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-fg/[0.06] bg-slate-950/75 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-3 px-4 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-glow">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-sm font-semibold text-white">AI 繪畫提示詞專家</h1>
+              <h1 className="truncate text-sm font-semibold text-fg">AI 繪畫提示詞專家</h1>
               <p className="hidden truncate text-[11px] text-slate-500 sm:block">
                 Stable Diffusion 權重語法 · NovelAI Danbooru 標籤
               </p>
@@ -212,6 +214,15 @@ const App: React.FC = () => {
           </div>
 
           <nav className="flex items-center gap-1.5" aria-label="工具列">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="icon-btn"
+              title={theme === 'dark' ? '切換為淺色模式' : '切換為深色模式'}
+              aria-label={theme === 'dark' ? '切換為淺色模式' : '切換為深色模式'}
+            >
+              {theme === 'dark' ? <Sun size={16} className="text-amber-300" /> : <Moon size={16} className="text-indigo-500" />}
+            </button>
             <button
               type="button"
               onClick={() => setIsApiKeyOpen(true)}
@@ -291,7 +302,7 @@ const App: React.FC = () => {
                     <Palette size={11} />
                     <span className="font-mono">{selectedArtist}</span>
                     <button type="button" onClick={() => setSelectedArtist(null)} disabled={loading}
-                      className="-mr-0.5 rounded-full p-0.5 hover:bg-white/10" aria-label="清除指定畫師">
+                      className="-mr-0.5 rounded-full p-0.5 hover:bg-fg/10" aria-label="清除指定畫師">
                       <X size={11} />
                     </button>
                   </span>
@@ -305,7 +316,7 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/[0.06] bg-white/[0.015] px-4 py-3">
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-fg/[0.06] bg-fg/[0.015] px-4 py-3">
               <span className={`chip ${isNai ? 'border-violet-500/30 bg-violet-500/10 text-violet-200' : 'border-sky-500/30 bg-sky-500/10 text-sky-200'}`}>
                 {isNai ? 'NovelAI {tag}' : 'SD (tag:1.2)'}
               </span>
@@ -327,7 +338,7 @@ const App: React.FC = () => {
                 role="alert"
                 className={`flex items-start gap-3 border-t px-4 py-3 text-xs ${
                   error === STOPPED_MESSAGE
-                    ? 'border-white/[0.06] text-slate-400'
+                    ? 'border-fg/[0.06] text-slate-400'
                     : 'border-rose-500/20 bg-rose-500/[0.07] text-rose-100'
                 }`}
               >
@@ -429,7 +440,7 @@ const App: React.FC = () => {
                       type="button"
                       onClick={() => handleApplySuggestion(s)}
                       disabled={loading}
-                      className="group flex flex-col gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/[0.06] disabled:opacity-50"
+                      className="group flex flex-col gap-1 rounded-xl border border-fg/[0.06] bg-fg/[0.02] p-3 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/[0.06] disabled:opacity-50"
                     >
                       <span className="flex items-center justify-between gap-1 text-xs font-semibold text-slate-100 group-hover:text-violet-200">
                         {s.label}

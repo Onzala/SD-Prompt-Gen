@@ -80,9 +80,9 @@ const ImageCropperModal: React.FC<ImageCropperModalProps> = ({ isOpen, imageSrc,
   return (
     <div className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-label="裁切圖片" onClick={(e) => e.stopPropagation()} className="card flex w-full max-w-2xl animate-pop-in flex-col overflow-hidden bg-slate-900">
-        <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+        <div className="flex items-center justify-between border-b border-fg/[0.06] px-4 py-3">
           <h3 className="text-sm font-semibold text-slate-100">裁切圖片</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white transition-colors" aria-label="關閉">
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-fg transition-colors" aria-label="關閉">
             <X size={20} />
           </button>
         </div>
@@ -104,7 +104,7 @@ const ImageCropperModal: React.FC<ImageCropperModalProps> = ({ isOpen, imageSrc,
           </ReactCrop>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-white/[0.06] px-4 py-3">
+        <div className="flex justify-end gap-2 border-t border-fg/[0.06] px-4 py-3">
           <button type="button" onClick={onClose} className="btn-ghost h-9 px-4">
             取消
           </button>

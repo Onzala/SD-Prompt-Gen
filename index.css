@@ -3,10 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
-
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
@@ -21,8 +17,14 @@
     background-attachment: fixed;
   }
 
+  :root[data-theme='light'] body {
+    background-image:
+      radial-gradient(60rem 30rem at 10% -10%, rgba(99, 102, 241, 0.10), transparent 60%),
+      radial-gradient(50rem 30rem at 100% 0%, rgba(168, 85, 247, 0.07), transparent 60%);
+  }
+
   ::selection {
-    @apply bg-violet-500/40 text-white;
+    @apply bg-violet-500/40 text-fg;
   }
 
   :focus-visible {
@@ -32,7 +34,7 @@
   /* 細捲軸 */
   * {
     scrollbar-width: thin;
-    scrollbar-color: theme('colors.slate.700') transparent;
+    scrollbar-color: rgb(var(--c-slate-700)) transparent;
   }
   *::-webkit-scrollbar {
     width: 8px;
@@ -55,7 +57,11 @@
 
 @layer components {
   .card {
-    @apply rounded-2xl border border-white/[0.06] bg-slate-900/70 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] backdrop-blur-sm;
+    @apply rounded-2xl border border-fg/[0.06] bg-slate-900/70 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] backdrop-blur-sm;
+  }
+
+  :root[data-theme='light'] .card {
+    box-shadow: 0 1px 2px rgba(17, 19, 31, 0.04), 0 4px 16px -8px rgba(17, 19, 31, 0.08);
   }
 
   .card-header {
@@ -75,7 +81,7 @@
   }
 
   .btn-ghost {
-    @apply btn border border-white/[0.06] bg-white/[0.03] text-slate-300 hover:bg-white/[0.07] hover:text-white;
+    @apply btn border border-fg/[0.06] bg-fg/[0.03] text-slate-300 hover:bg-fg/[0.07] hover:text-fg;
   }
 
   .btn-primary {
@@ -83,11 +89,11 @@
   }
 
   .icon-btn {
-    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.03] text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-white;
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-fg/[0.06] bg-fg/[0.03] text-slate-300 transition-colors hover:bg-fg/[0.08] hover:text-fg;
   }
 
   .input {
-    @apply w-full rounded-lg border border-white/[0.08] bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20;
+    @apply w-full rounded-lg border border-fg/[0.08] bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-violet-500/60 focus:outline-none focus:ring-2 focus:ring-violet-500/20;
   }
 
   .chip {
@@ -95,14 +101,14 @@
   }
 
   .kbd {
-    @apply rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-slate-400;
+    @apply rounded border border-fg/10 bg-fg/5 px-1.5 py-0.5 font-mono text-[10px] text-slate-400;
   }
 
   .skeleton {
-    @apply relative overflow-hidden rounded-lg bg-white/[0.04];
+    @apply relative overflow-hidden rounded-lg bg-fg/[0.04];
   }
   .skeleton::after {
     content: '';
-    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/[0.06] to-transparent;
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-fg/[0.06] to-transparent;
   }
 }
