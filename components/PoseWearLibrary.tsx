@@ -21,7 +21,7 @@ interface Props {
 
 const allGroups: PoseWearGroup[] = ['姿勢', '服裝', '表情', '髮型'];
 const collections = Object.keys(poseWearCollections) as PoseWearCollection[];
-const pageSize = 16;
+const pageSize = 8;
 
 function CatalogCard({ item, alternate, disabled, onSelect }: {
   item: PoseWearItem;

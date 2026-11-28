@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, Send, History as HistoryIcon, Lightbulb, Square, RefreshCw, AlertCircle, CheckCircle2,
-  KeyRound, ShieldAlert, SlidersHorizontal, Palette, X, Wand2, ArrowUpRight, Images, Sun, Moon,
+  KeyRound, ShieldAlert, SlidersHorizontal, Palette, X, Wand2, ArrowUpRight, Images, Sun, Moon, Wand, ImageIcon,
 } from 'lucide-react';
 import { GeminiModel, PromptFormat, HistoryItem, ModificationSuggestion } from './types';
 import { generateSDPrompt, getRefinementSuggestions, getStoredApiKey, setStoredApiKey } from './services/geminiService';
@@ -40,6 +40,9 @@ const App: React.FC = () => {
   const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   const [apiKey, setApiKey] = useState<string>(() => getStoredApiKey());
+  const [mode, setMode] = useState<'prompt' | 'image'>(() =>
+    localStorage.getItem('sd_prompt_mode') === 'image' ? 'image' : 'prompt');
+  useEffect(() => { localStorage.setItem('sd_prompt_mode', mode); }, [mode]);
   const [isApiKeyOpen, setIsApiKeyOpen] = useState(() => !getStoredApiKey());
 
   const { theme, toggleTheme } = useTheme();
@@ -214,6 +217,22 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          <div className="flex shrink-0 gap-1 rounded-xl border border-fg/[0.06] bg-slate-950/40 p-1" role="tablist" aria-label="功能">
+            {([
+              { id: 'prompt', label: '產生 Prompt', short: 'Prompt', Icon: Wand },
+              { id: 'image', label: '產生圖片', short: '生圖', Icon: ImageIcon },
+            ] as const).map(({ id, label, short, Icon }) => (
+              <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => setMode(id)}
+                className={`flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-colors ${mode === id
+                  ? 'bg-violet-500/20 text-violet-100 ring-1 ring-violet-500/40'
+                  : 'text-slate-400 hover:bg-fg/[0.04] hover:text-fg'}`}>
+                <Icon size={13} />
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{short}</span>
+              </button>
+            ))}
+          </div>
+
           <nav className="flex items-center gap-1.5" aria-label="工具列">
             <button
               type="button"
@@ -266,7 +285,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-[1440px] flex-1 gap-5 p-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-6 lg:p-6">
+      <main className={`mx-auto w-full max-w-[1440px] flex-1 gap-5 p-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-6 lg:p-6 ${mode === 'prompt' ? 'grid' : 'hidden'}`}>
         {/* 左欄：輸入與設定 */}
         <div className="flex min-w-0 flex-col gap-5">
           {/* 1. 畫面需求（主要輸入） */}
@@ -417,16 +436,6 @@ const App: React.FC = () => {
             </div>
           </section>
 
-          {/* 4. 姿勢調整（實驗）：直接用 Gemini 圖片模型產圖 */}
-          <PoseEditor
-            hasApiKey={!!apiKey}
-            onNeedApiKey={() => setIsApiKeyOpen(true)}
-            showAdult={showAdultReferences}
-            onShowAdultChange={enabled => {
-              setShowAdultReferences(enabled);
-              if (!enabled) setPoseWearReferences(current => current.filter(entry => !entry.reference.adult));
-            }}
-          />
         </div>
 
         {/* 右欄：結果 */}
@@ -467,6 +476,19 @@ const App: React.FC = () => {
         </div>
       </main>
 
+      {/* 產生圖片：切換分頁時保留狀態，所以只隱藏不卸載 */}
+      <div className={`mx-auto w-full max-w-[1440px] flex-1 p-4 lg:p-6 ${mode === 'image' ? '' : 'hidden'}`}>
+        <PoseEditor
+          hasApiKey={!!apiKey}
+          onNeedApiKey={() => setIsApiKeyOpen(true)}
+          showAdult={showAdultReferences}
+          onShowAdultChange={enabled => {
+            setShowAdultReferences(enabled);
+            if (!enabled) setPoseWearReferences(current => current.filter(entry => !entry.reference.adult));
+          }}
+        />
+      </div>
+
       {/* 自動備援通知（toast） */}
       {notice && (
         <div role="status" className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-lg animate-pop-in items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-slate-900/95 px-4 py-3 text-xs text-emerald-100 shadow-2xl backdrop-blur">
@@ -492,7 +514,8 @@ const App: React.FC = () => {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         history={history}
-        onSelect={(item) => {
+          onSelect={(item) => {
+            setMode('prompt');
             if (loading) handleStop();
             setInputText(item.inputText);
             setModel(item.model);

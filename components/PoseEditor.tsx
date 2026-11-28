@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  PersonStanding, ImagePlus, X, Download, Square, Sparkles, AlertCircle, FlaskConical, Info, Palette, ScanSearch, Brush, Plus,
+  PersonStanding, X, Download, Square, Sparkles, AlertCircle, FlaskConical, Info, Palette, ScanSearch, Brush, Plus,
+  ImageIcon,
 } from 'lucide-react';
 import PoseWearLibrary from './PoseWearLibrary';
-import { preparePoseWearReference, type SelectedPoseWearReference } from '../services/posewear';
+import ImageSlot from './ImageSlot';
+import NovelAIStudio from './NovelAIStudio';
+import { preparePoseWearReference, referenceName, type SelectedPoseWearReference } from '../services/posewear';
 import {
   ASPECT_RATIOS, IMAGE_MODELS, MAX_STYLE_REFS, analyzeArtStyle, fileToScaledDataUrl, generatePoseImage, restyleImage,
-  type AspectRatio, type ImageSize, type PoseEditResult,
+  type OutfitSource, type AspectRatio, type ImageSize, type PoseEditResult, type PoseSource,
 } from '../services/poseEditService';
 
 type PoseMode = 'library' | 'upload' | 'text';
-type Busy = null | 'analyze' | 'generate' | 'restyle';
+type Busy = string | null;
+type Engine = 'gemini' | 'novelai';
 
 interface Props {
   hasApiKey: boolean;
@@ -21,65 +25,8 @@ interface Props {
 
 interface ResultEntry extends PoseEditResult {
   id: number;
-  kind: 'pose' | 'restyle';
-}
-
-function ImageSlot({ label, hint, image, onChange, disabled }: {
-  label: string;
-  hint: string;
-  image: string | null;
-  onChange: (image: string | null) => void;
-  disabled: boolean;
-}) {
-  const [error, setError] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const load = async (file?: File) => {
-    if (!file) return;
-    setError(null);
-    try {
-      onChange(await fileToScaledDataUrl(file));
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-  if (image) {
-    return (
-      <div className="flex items-center gap-3 rounded-xl border border-fg/[0.06] bg-slate-950/50 p-2">
-        <img src={image} alt={`${label}預覽`} className="h-16 w-16 shrink-0 rounded-lg bg-slate-900 object-contain" />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-slate-200">{label}已就緒</p>
-          <p className="text-[11px] text-slate-500">{hint}</p>
-        </div>
-        <button type="button" onClick={() => onChange(null)} disabled={disabled}
-          className="icon-btn h-8 w-8 hover:border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-300" aria-label={`移除${label}`}>
-          <X size={15} />
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <label
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={e => { e.preventDefault(); setDragging(false); }}
-        onDrop={e => { e.preventDefault(); setDragging(false); void load(e.dataTransfer.files?.[0]); }}
-        className={`flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-3 transition-colors focus-within:ring-2 focus-within:ring-violet-400/60 ${
-          dragging ? 'border-violet-400 bg-violet-500/10' : 'border-fg/10 hover:border-fg/20 hover:bg-fg/[0.02]'
-        } ${disabled ? 'pointer-events-none opacity-50' : ''}`}
-      >
-        <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={disabled}
-          onChange={e => { void load(e.target.files?.[0]); e.target.value = ''; }} />
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-fg/[0.04] text-slate-400">
-          <ImagePlus size={17} />
-        </span>
-        <span className="min-w-0 text-xs text-slate-400">
-          <span className="font-medium text-violet-300">選擇{label}</span>或拖放到這裡
-          <span className="block text-[11px] text-slate-500">{hint}</span>
-        </span>
-      </label>
-      {error && <p className="mt-1 text-[11px] text-rose-300">{error}</p>}
-    </div>
-  );
+  kind: 'pose' | 'restyle' | 'nai';
+  seed?: number;
 }
 
 // 畫風參考圖：最多 3 張小縮圖
@@ -141,12 +88,19 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
   const [warning, setWarning] = useState<string | null>(null);
   const [results, setResults] = useState<ResultEntry[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [engine, setEngine] = useState<Engine>('gemini');
+  // 服裝（素材庫）
+  const [outfitSel, setOutfitSel] = useState<SelectedPoseWearReference[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const loading = busy !== null;
+  const hasOutfit = outfitSel.length > 0;
 
   useEffect(() => () => abortRef.current?.abort(), []);
   useEffect(() => {
-    if (!showAdult) setLibraryPose(current => current.filter(entry => !entry.reference.adult));
+    if (!showAdult) {
+      setLibraryPose(current => current.filter(entry => !entry.reference.adult));
+      setOutfitSel(current => current.filter(entry => !entry.reference.adult));
+    }
   }, [showAdult]);
 
   const changeCharacter = (image: string | null) => {
@@ -160,15 +114,15 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
   const active = results.find(r => r.id === activeId) ?? results[0];
 
   // 共用：建立 AbortController、處理錯誤與狀態
-  const run = async (kind: Exclude<Busy, null>, task: (signal: AbortSignal) => Promise<void>) => {
-    if (!hasApiKey) return onNeedApiKey();
+  const run = async (kind: string, task: (signal: AbortSignal, warn: (msg: string) => void) => Promise<void>, needGemini = true) => {
+    if (needGemini && !hasApiKey) return onNeedApiKey();
     const controller = new AbortController();
     abortRef.current = controller;
     setBusy(kind);
     setError(null);
     setWarning(null);
     try {
-      await task(controller.signal);
+      await task(controller.signal, msg => setWarning(prev => (prev ? `${prev}\n${msg}` : msg)));
     } catch (e: any) {
       if (!controller.signal.aborted && e.message !== 'GenerationCancelled') setError(e.message || '生成失敗');
     } finally {
@@ -179,10 +133,25 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
 
   const stop = () => abortRef.current?.abort();
 
-  const pushResult = (res: PoseEditResult, kind: ResultEntry['kind']) => {
-    const entry = { ...res, id: Date.now(), kind };
+  const pushResult = (res: PoseEditResult, kind: ResultEntry['kind'], seed?: number) => {
+    const entry = { ...res, id: Date.now(), kind, seed };
     setResults(prev => [entry, ...prev].slice(0, 12));
     setActiveId(entry.id);
+  };
+
+  const resolvePose = async (signal: AbortSignal): Promise<PoseSource> => {
+    if (mode === 'library') {
+      const ref = await preparePoseWearReference(libraryPose[0], signal);
+      return { image: ref.image, title: ref.title, description: ref.description };
+    }
+    if (mode === 'upload') return { image: uploadedPose! };
+    return { description: poseText.trim() };
+  };
+
+  const resolveOutfit = async (signal: AbortSignal): Promise<OutfitSource | undefined> => {
+    if (!outfitSel[0]) return undefined;
+    const ref = await preparePoseWearReference(outfitSel[0], signal);
+    return { image: ref.image, title: referenceName(outfitSel[0].reference), description: ref.description };
   };
 
   const handleAnalyze = () => characterImage && run('analyze', async signal => {
@@ -202,17 +171,10 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
           setWarning(`${e.message} 這次先不帶畫風描述生成。`);
         }
       }
-      let pose: { image?: string; title?: string; description?: string };
-      if (mode === 'library') {
-        const ref = await preparePoseWearReference(libraryPose[0], signal);
-        pose = { image: ref.image, title: ref.title, description: ref.description };
-      } else if (mode === 'upload') {
-        pose = { image: uploadedPose! };
-      } else {
-        pose = { description: poseText.trim() };
-      }
+      const pose = await resolvePose(signal);
+      const outfit = await resolveOutfit(signal);
       const res = await generatePoseImage({
-        characterImage, styleRefs, styleDescription: style, pose, extraInstruction: extra,
+        characterImage, styleRefs, styleDescription: style, pose, outfit, extraInstruction: extra,
         model, aspectRatio, imageSize, signal,
       });
       if (!signal.aborted) pushResult(res, 'pose');
@@ -224,7 +186,7 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
     const draftImage = active.image;
     return run('restyle', async signal => {
       const res = await restyleImage({
-        characterImage, styleRefs, styleDescription, draftImage, extraInstruction: extra,
+        characterImage, styleRefs, styleDescription, draftImage, keepDraftOutfit: hasOutfit, extraInstruction: extra,
         model, aspectRatio, imageSize, signal,
       });
       if (!signal.aborted) pushResult(res, 'restyle');
@@ -247,7 +209,8 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
   ];
 
   return (
-    <section className="card overflow-hidden" aria-labelledby="pose-edit-title">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-6">
+    <section className="card min-w-0 self-start overflow-hidden" aria-labelledby="pose-edit-title">
       <div className="card-header">
         <h2 id="pose-edit-title" className="card-title">
           <PersonStanding size={15} className="text-emerald-300" />
@@ -260,14 +223,42 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
       </div>
 
       <div className="space-y-4 px-4 pb-4">
+        <div className="grid grid-cols-2 gap-1 rounded-xl border border-fg/[0.06] bg-slate-950/40 p-1" role="tablist" aria-label="生圖引擎">
+          {([
+            { id: 'gemini', label: 'Gemini', note: '畫風對照最好，審查嚴' },
+            { id: 'novelai', label: 'NovelAI', note: 'Precise Reference，可成人內容' },
+          ] as const).map(option => (
+            <button key={option.id} type="button" role="tab" aria-selected={engine === option.id}
+              onClick={() => { setEngine(option.id); setError(null); setWarning(null); }} disabled={loading}
+              className={`rounded-lg px-3 py-1.5 text-left transition-colors ${engine === option.id
+                ? 'bg-violet-500/20 text-violet-100 ring-1 ring-violet-500/40'
+                : 'text-slate-400 hover:bg-fg/[0.04] hover:text-fg'}`}>
+              <span className="block text-xs font-semibold">{option.label}</span>
+              <span className="block text-[10px] opacity-80">{option.note}</span>
+            </button>
+          ))}
+        </div>
+
+        {engine === 'novelai' ? (
+          <NovelAIStudio
+            hasApiKey={hasApiKey}
+            onNeedApiKey={onNeedApiKey}
+            showAdult={showAdult}
+            onShowAdultChange={onShowAdultChange}
+            busy={busy}
+            run={run}
+            stop={stop}
+            onResult={(res, seed) => pushResult(res, 'nai', seed)}
+          />
+        ) : (<>
         <div>
           <div className="field-label">A · 角色圖</div>
           <ImageSlot label="角色圖" hint="要保留長相、服裝與畫風的角色" image={characterImage}
             onChange={changeCharacter} disabled={loading} />
         </div>
 
-        {/* 畫風一致 */}
-        <div className="space-y-3 rounded-xl border border-fuchsia-500/15 bg-fuchsia-500/[0.03] p-3">
+        {/* 畫風一致（Gemini） */}
+        {engine === 'gemini' && <div className="space-y-3 rounded-xl border border-fuchsia-500/15 bg-fuchsia-500/[0.03] p-3">
           <div className="flex items-center gap-1.5 text-xs font-medium text-fuchsia-200">
             <Palette size={13} /> 畫風一致
           </div>
@@ -294,7 +285,7 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
               留空時，生成前自動分析（用文字模型，費用很低）
             </label>
           </div>
-        </div>
+        </div>}
 
         <div>
           <div className="field-label">
@@ -335,12 +326,28 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
         </div>
 
         <div>
+          <PoseWearLibrary
+            selected={outfitSel}
+            onChange={setOutfitSel}
+            showAdult={showAdult}
+            onShowAdultChange={onShowAdultChange}
+            disabled={loading}
+            groups={['服裝']}
+            label="C · 換穿服裝（選填）"
+            hint="從素材庫挑一套服裝；不選就沿用角色圖的衣服"
+          />
+          {hasOutfit && engine === 'gemini' && (
+            <p className="mt-1 text-[11px] text-slate-500">服裝圖會一起送給 Gemini，只取衣服的設計與顏色，以角色圖的畫風重畫。</p>
+          )}
+        </div>
+
+        <div>
           <div className="field-label">額外指示（選填）</div>
           <input className="input" value={extra} onChange={e => setExtra(e.target.value)} disabled={loading}
             placeholder="例如：背景改成白色、保持全身入鏡" aria-label="額外指示" />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        {engine === 'gemini' && <div className="grid gap-3 sm:grid-cols-3">
           <label className="min-w-0">
             <span className="field-label">圖片模型</span>
             <select className="input py-1.5 text-xs" value={model} disabled={loading} onChange={e => setModel(e.target.value)}>
@@ -362,32 +369,49 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
               <option value="2K">2K</option>
             </select>
           </label>
-        </div>
+        </div>}
 
-        <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500">
+        {engine === 'gemini' && <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500">
           <Info size={12} className="mt-0.5 shrink-0" />
           <span>
             圖片生成需要付費方案的 API 金鑰，每張約 US${price?.toFixed(3) ?? '—'}（官方定價），「風格校正」會再算一張。
             圖片模型的安全審查比文字嚴，暴露、暴力或看起來像未成年的角色容易被擋；被擋或空白會記進「審查統計」。輸出圖帶有 SynthID 浮水印。
           </span>
-        </p>
+        </p>}
+        </>)}
       </div>
 
-      <div className="flex items-center justify-end gap-3 border-t border-fg/[0.06] bg-fg/[0.015] px-4 py-3">
+      {engine === 'gemini' && <div className="flex items-center justify-end gap-3 border-t border-fg/[0.06] bg-fg/[0.015] px-4 py-3">
         <button type="button" onClick={loading ? stop : handleGenerate} disabled={!loading && !canGenerate}
           className={loading ? 'btn h-10 bg-rose-500/90 px-5 text-sm text-white hover:bg-rose-500' : 'btn-primary h-10 px-5 text-sm'}>
           {loading ? <Square size={14} fill="currentColor" /> : <Sparkles size={15} />}
           {loading ? '停止' : '生成姿勢圖'}
         </button>
-      </div>
+      </div>}
 
-      {(loading || error || warning || results.length > 0) && (
-        <div className="space-y-3 border-t border-fg/[0.06] p-4" aria-live="polite">
+    </section>
+
+    <section className="card min-w-0 overflow-hidden lg:sticky lg:top-[4.75rem] lg:max-h-[calc(100vh-6.25rem)] lg:self-start lg:overflow-y-auto" aria-labelledby="pose-result-title">
+      <div className="card-header">
+        <h2 id="pose-result-title" className="card-title">
+          <ImageIcon size={15} className="text-sky-300" /> 生成結果
+        </h2>
+        {results.length > 0 && <span className="text-[11px] text-slate-500">{results.length} 張</span>}
+      </div>
+        <div className="space-y-3 px-4 pb-4" aria-live="polite">
+          {!loading && !error && !warning && results.length === 0 && (
+            <div className="grid min-h-[320px] place-items-center rounded-xl border border-dashed border-fg/[0.08] text-center">
+              <div className="space-y-2 px-6 text-slate-500">
+                <ImageIcon size={28} className="mx-auto opacity-60" />
+                <p className="text-xs">{engine === 'novelai' ? '填好 prompt 或從圖片拆解後按「生成」，結果會出現在這裡。' : '放入角色圖與姿勢，按「生成姿勢圖」後結果會出現在這裡。'}</p>
+              </div>
+            </div>
+          )}
           {(busy === 'generate' || busy === 'restyle') && (
             <div className="flex items-center gap-3">
               <div className="skeleton h-20 w-20 shrink-0" />
               <p role="status" className="text-xs text-slate-400">
-                {busy === 'restyle' ? '正在對照角色圖校正畫風…' : '生成中，圖片模型通常需要 10–40 秒…'}
+                {busy === 'restyle' ? '正在對照角色圖校正畫風…' : engine === 'novelai' ? '生成中，NovelAI 通常需要 5–20 秒…' : '生成中，圖片模型通常需要 10–40 秒…'}
               </p>
             </div>
           )}
@@ -397,7 +421,7 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
             </p>
           )}
           {warning && (
-            <p className="flex items-start gap-2 text-xs text-amber-200">
+            <p className="flex items-start gap-2 whitespace-pre-line text-xs text-amber-200">
               <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-400" /> {warning}
             </p>
           )}
@@ -414,7 +438,7 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
               {active.image && (
                 <figure className="space-y-2">
                   <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_96px]">
-                    <img src={active.image} alt="生成的姿勢圖" className="max-h-[70vh] w-full rounded-xl bg-slate-950 object-contain" />
+                    <img src={active.image} alt="生成的姿勢圖" className="max-h-[70vh] lg:max-h-[calc(100vh-16rem)] w-full rounded-xl bg-slate-950 object-contain" />
                     {characterImage && (
                       <div className="hidden sm:block">
                         <p className="mb-1 text-[10px] text-slate-500">對照：A 角色圖</p>
@@ -425,10 +449,12 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
                   <figcaption className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                     <span>{active.kind === 'restyle' ? '風格校正 · ' : ''}{active.usedModel}</span>
                     <span className="flex gap-1.5">
-                      <button type="button" onClick={handleRestyle} disabled={loading || !characterImage} className="btn-ghost h-8"
-                        title="保留這張的姿勢與構圖，再對照角色圖重繪一次畫風（多算一張的費用）">
-                        <Brush size={13} /> 風格校正
-                      </button>
+                      {active.kind !== 'nai' && (
+                        <button type="button" onClick={handleRestyle} disabled={loading || !characterImage} className="btn-ghost h-8"
+                          title="保留這張的姿勢與構圖，再對照角色圖重繪一次畫風（多算一張的費用）">
+                          <Brush size={13} /> 風格校正
+                        </button>
+                      )}
                       <button type="button" onClick={() => download(active)} className="btn-ghost h-8">
                         <Download size={13} /> 下載
                       </button>
@@ -457,7 +483,7 @@ export default function PoseEditor({ hasApiKey, onNeedApiKey, showAdult, onShowA
             </div>
           )}
         </div>
-      )}
     </section>
+    </div>
   );
 }

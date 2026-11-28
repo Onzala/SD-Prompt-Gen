@@ -56,12 +56,20 @@ interface StyleInputs {
   extraInstruction?: string;
 }
 
+export interface OutfitSource {
+  image: string;        // data URL
+  title?: string;
+  description?: string;
+}
+
 export interface PoseEditRequest extends ImageOptions, StyleInputs {
   pose: PoseSource;
+  outfit?: OutfitSource; // 換穿素材庫的服裝
 }
 
 export interface RestyleRequest extends ImageOptions, StyleInputs {
   draftImage: string;      // 要校正的結果圖
+  keepDraftOutfit?: boolean; // 換過服裝時，校正不要把衣服改回 A 圖
 }
 
 export interface PoseEditResult {
@@ -135,6 +143,177 @@ export const analyzeArtStyle = async (characterImage: string, signal?: AbortSign
 };
 
 // ------------------------------------------
+// 1b. 姿勢 → Danbooru 標籤（給 NovelAI 用；NovelAI 現行模型沒有從圖片參考姿勢的功能）
+// ------------------------------------------
+const POSE_TAG_PROMPT = `Convert the body pose into Danbooru tags for NovelAI image generation.
+Output ONLY pose-related tags, comma-separated, lowercase, using spaces not underscores. No preamble, no explanation.
+Include, when visible: overall posture (standing / sitting / kneeling / lying / squatting / leaning...), leg position (crossed legs, knees up, legs apart, one knee up...), arm and hand position (arms up, hand on hip, hand on own cheek, arms behind back, peace sign...), torso direction and twist, head direction and tilt, looking at viewer or away, camera angle (from above, from below, from side, from behind, dutch angle...), framing (full body, cowboy shot, upper body...).
+Do NOT include character appearance, clothing, hair, gender, art style, background or quality tags.
+Aim for 8–20 precise tags.`;
+
+export const poseToDanbooruTags = async (pose: PoseSource, signal?: AbortSignal): Promise<string> => {
+  const ai = getAIClient();
+  const parts: Part[] = [];
+  if (pose.image) parts.push(toInlinePart(pose.image, '姿勢參考圖'));
+  const hint = [pose.title, pose.description].filter(Boolean).join(' — ');
+  parts.push({ text: `${POSE_TAG_PROMPT}${hint ? `\nPose notes (may be in Chinese): ${hint}` : ''}` });
+  let lastError: any = null;
+  for (const model of [GeminiModel.FLASH_LITE_LATEST, GeminiModel.FLASH_3_8, GeminiModel.FLASH_LATEST] as string[]) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts }],
+        config: { temperature: 0.2, abortSignal: signal, safetySettings: SAFETY_SETTINGS },
+      });
+      const blockReason = getBlockReason(response);
+      if (blockReason) {
+        recordModerationOutcome(model, !!pose.image, 'blocked', blockReason);
+        throw new Error(`姿勢轉標籤被 ${model} 的安全過濾器攔截（${blockReason}），可以手動填寫姿勢標籤。`);
+      }
+      const text = (response.text || '').trim();
+      if (!text || looksLikeRefusal(text)) {
+        recordModerationOutcome(model, !!pose.image, text ? 'refused' : 'empty');
+        throw new Error(`姿勢轉標籤沒有結果（${model}），可以手動填寫姿勢標籤。`);
+      }
+      recordModerationOutcome(model, !!pose.image, 'ok');
+      return text.replace(/```[a-z]*|```/g, '').replace(/\s*\n\s*/g, ', ').replace(/_/g, ' ').replace(/,\s*,/g, ',').trim();
+    } catch (err: any) {
+      if (signal?.aborted || isAbortError(err)) throw new Error('GenerationCancelled');
+      lastError = err;
+      if (isTemporaryModelError(err)) {
+        await wait(600, signal);
+        continue;
+      }
+      throw err.message?.startsWith('姿勢轉標籤') ? err : toFriendlyError(err);
+    }
+  }
+  throw toFriendlyError(lastError);
+};
+
+// 角色圖的外觀 → Danbooru 外觀標籤（補強 Precise Reference 容易遺漏的細節）
+const appearancePrompt = (excludeOutfit: boolean) => `List the identifying APPEARANCE of the main character in this illustration as Danbooru tags for NovelAI image generation.
+Output ONLY comma-separated lowercase tags with spaces (no underscores), no explanation.
+Pick the 6–15 most distinctive, clearly visible features, in this order:
+- hair: length, color, style (e.g. long hair, white hair, twintails, hime cut, ahoge, hair over one eye)
+- eyes: color and notable traits (red eyes, heterochromia, tsurime)
+- distinctive body / face features (animal ears, horns, mole under eye, dark skin, freckles)
+${excludeOutfit
+  ? '- Do NOT tag any clothing or accessories worn on clothes: the outfit will be replaced.'
+  : '- outfit: main garments with colors, then the most distinctive accessories (e.g. black jacket, white shirt, pleated skirt, choker, thighhighs)'}
+Do NOT tag pose, expression, camera angle, background, art style, quality words, or character / series names. Do NOT tag count tags like 1girl or solo.`;
+
+export const appearanceToDanbooruTags = async (characterImage: string, excludeOutfit: boolean, signal?: AbortSignal): Promise<string> => {
+  const ai = getAIClient();
+  let lastError: any = null;
+  for (const model of [GeminiModel.FLASH_LITE_LATEST, GeminiModel.FLASH_3_8, GeminiModel.FLASH_LATEST] as string[]) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [toInlinePart(characterImage, '角色圖'), { text: appearancePrompt(excludeOutfit) }] }],
+        config: { temperature: 0.2, abortSignal: signal, safetySettings: SAFETY_SETTINGS },
+      });
+      const blockReason = getBlockReason(response);
+      const out = (response.text || '').trim();
+      if (blockReason || !out || looksLikeRefusal(out)) {
+        recordModerationOutcome(model, true, blockReason ? 'blocked' : out ? 'refused' : 'empty', blockReason);
+        throw new Error(`外觀標籤分析沒有結果（${model}${blockReason ? `，${blockReason}` : ''}），可以手動填寫外觀標籤。`);
+      }
+      recordModerationOutcome(model, true, 'ok');
+      return out.replace(/```[a-z]*|```/g, '').replace(/\s*\n\s*/g, ', ').replace(/_/g, ' ')
+        .split(',').map(t => t.trim()).filter(t => t && !/^(\d+(girl|boy)s?|solo|masterpiece|best quality)$/.test(t)).join(', ');
+    } catch (err: any) {
+      if (signal?.aborted || isAbortError(err)) throw new Error('GenerationCancelled');
+      lastError = err;
+      if (isTemporaryModelError(err)) {
+        await wait(600, signal);
+        continue;
+      }
+      throw err.message?.startsWith('外觀標籤') ? err : toFriendlyError(err);
+    }
+  }
+  throw toFriendlyError(lastError);
+};
+
+// 角色圖的畫風 → Danbooru 畫風標籤（給 NovelAI，補強 Precise Reference）
+const STYLE_TAG_PROMPT = `Describe ONLY the art style of this illustration as Danbooru tags for NovelAI image generation.
+Output ONLY comma-separated lowercase tags with spaces (no underscores), no explanation.
+Pick 6–14 tags that are actually visible, from areas like:
+- medium / rendering: flat color, cel shading, soft shading, painterly, watercolor (medium), realistic, semi-realistic, 3d, sketch, oekaki
+- line art: thick outlines, thin outlines, no lineart, colored outline, black outline
+- shading & light: gradient, rim lighting, backlighting, dramatic lighting, soft lighting, high contrast, glowing
+- color: pastel colors, muted colors, vivid colors, limited palette, monochrome, warm colors, cool colors
+- face / anatomy stylization: detailed eyes, shiny skin, detailed skin, chibi, mature female proportions
+- era / look: retro artstyle, 1990s (style), anime coloring, game cg, official art
+Do NOT tag character identity, hair, eyes color, clothing, pose, background objects or quality words (masterpiece, best quality). Do NOT guess an artist name.`;
+
+export const styleToDanbooruTags = async (characterImage: string, signal?: AbortSignal): Promise<string> => {
+  const ai = getAIClient();
+  let lastError: any = null;
+  for (const model of [GeminiModel.FLASH_LITE_LATEST, GeminiModel.FLASH_3_8, GeminiModel.FLASH_LATEST] as string[]) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [toInlinePart(characterImage, '角色圖'), { text: STYLE_TAG_PROMPT }] }],
+        config: { temperature: 0.2, abortSignal: signal, safetySettings: SAFETY_SETTINGS },
+      });
+      const blockReason = getBlockReason(response);
+      const out = (response.text || '').trim();
+      if (blockReason || !out || looksLikeRefusal(out)) {
+        recordModerationOutcome(model, true, blockReason ? 'blocked' : out ? 'refused' : 'empty', blockReason);
+        throw new Error(`畫風標籤分析沒有結果（${model}${blockReason ? `，${blockReason}` : ''}），可以手動填寫畫風標籤。`);
+      }
+      recordModerationOutcome(model, true, 'ok');
+      return out.replace(/```[a-z]*|```/g, '').replace(/\s*\n\s*/g, ', ').replace(/_/g, ' ')
+        .split(',').map(t => t.trim()).filter(t => t && !/^(masterpiece|best quality|high quality|very aesthetic)$/.test(t)).join(', ');
+    } catch (err: any) {
+      if (signal?.aborted || isAbortError(err)) throw new Error('GenerationCancelled');
+      lastError = err;
+      if (isTemporaryModelError(err)) {
+        await wait(600, signal);
+        continue;
+      }
+      throw err.message?.startsWith('畫風標籤') ? err : toFriendlyError(err);
+    }
+  }
+  throw toFriendlyError(lastError);
+};
+
+// 中文等自然語言 → Danbooru 標籤（NovelAI 看不懂中文）
+export const hasCJK = (text: string) => /[぀-ヿ㐀-鿿가-힯]/.test(text);
+
+export const textToDanbooruTags = async (text: string, signal?: AbortSignal): Promise<string> => {
+  const ai = getAIClient();
+  const prompt = `Convert this request into Danbooru tags for NovelAI. Output ONLY comma-separated lowercase tags with spaces (no underscores), no explanation. Keep the meaning; do not add unrelated tags.\nRequest: ${text}`;
+  let lastError: any = null;
+  for (const model of [GeminiModel.FLASH_LITE_LATEST, GeminiModel.FLASH_3_8, GeminiModel.FLASH_LATEST] as string[]) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.2, abortSignal: signal, safetySettings: SAFETY_SETTINGS },
+      });
+      const blockReason = getBlockReason(response);
+      const out = (response.text || '').trim();
+      if (blockReason || !out || looksLikeRefusal(out)) {
+        recordModerationOutcome(model, false, blockReason ? 'blocked' : out ? 'refused' : 'empty', blockReason);
+        throw new Error(`標籤轉換沒有結果（${model}${blockReason ? `，${blockReason}` : ''}），請改用英文 Danbooru 標籤。`);
+      }
+      recordModerationOutcome(model, false, 'ok');
+      return out.replace(/```[a-z]*|```/g, '').replace(/\s*\n\s*/g, ', ').replace(/_/g, ' ').trim();
+    } catch (err: any) {
+      if (signal?.aborted || isAbortError(err)) throw new Error('GenerationCancelled');
+      lastError = err;
+      if (isTemporaryModelError(err)) {
+        await wait(600, signal);
+        continue;
+      }
+      throw err.message?.startsWith('標籤轉換') ? err : toFriendlyError(err);
+    }
+  }
+  throw toFriendlyError(lastError);
+};
+
+// ------------------------------------------
 // 2. 提示詞
 // ------------------------------------------
 const styleParts = ({ characterImage, styleRefs = [] }: StyleInputs): Part[] => {
@@ -163,7 +342,15 @@ const extraLine = (extra?: string) =>
 const buildPoseParts = (req: PoseEditRequest): Part[] => {
   const parts = styleParts(req);
   if (req.pose.image) parts.push({ text: 'POSE GUIDE (skeleton only):' }, toInlinePart(req.pose.image, '姿勢參考圖'));
+  if (req.outfit) parts.push({ text: 'OUTFIT REFERENCE (clothing only):' }, toInlinePart(req.outfit.image, '服裝參考圖'));
   const lines = ['Task: redraw the character from IMAGE A in a new pose.', ...styleRules(req)];
+  if (req.outfit) {
+    const outfitText = [req.outfit.title, req.outfit.description].filter(Boolean).join(' — ');
+    lines.push(
+      "OUTFIT OVERRIDE: dress the character in the clothing and accessories shown in the OUTFIT REFERENCE instead of IMAGE A's outfit. Keep IMAGE A's face, hair, body and art style; take only the garments' design, layers and colors from the OUTFIT REFERENCE, redrawn in IMAGE A's style.",
+      ...(outfitText ? [`Outfit description: ${outfitText}`] : []),
+    );
+  }
   if (req.pose.image) {
     lines.push(
       'The POSE GUIDE is drawn in a DIFFERENT style (line drawing, mannequin, depth map or another person). Use it ONLY as a skeleton: body pose, limb positions, head direction, hand gestures and camera angle.',
@@ -184,7 +371,9 @@ const buildRestyleParts = (req: RestyleRequest): Part[] => {
     'Task: re-render the DRAFT so its art style matches IMAGE A exactly.',
     'Keep the DRAFT\'s pose, composition, framing, camera angle and background layout unchanged.',
     ...styleRules(req),
-    'Fix any drift in face, eyes, hair, outfit details and colors so they match IMAGE A.',
+    req.keepDraftOutfit
+      ? "Fix any drift in face, eyes and hair so they match IMAGE A. Keep the DRAFT's outfit design; only re-render it in IMAGE A's style."
+      : 'Fix any drift in face, eyes, hair, outfit details and colors so they match IMAGE A.',
     'Output a single illustration. No text, no watermark.',
     ...extraLine(req.extraInstruction),
   ];
@@ -295,3 +484,95 @@ export const fileToScaledDataUrl = (file: Blob, maxSide = 2048): Promise<string>
     };
     img.src = url;
   });
+
+// ------------------------------------------
+// 把一張圖拆解成 NovelAI 的各個欄位（基本 prompt、角色 prompt、位置、負面、尺寸、模式）
+// 寫法依官方文件 docs.novelai.net/en/image/multiplecharacters、/tags（2026-11-28 查證）：
+//   人數標籤（1girl, 1boy…）只放基本 prompt；角色欄只寫 girl／boy／other，不寫數字；
+//   互動動作用 source#／target#／mutual# 前綴
+// ------------------------------------------
+export interface NaiDecomposition {
+  orientation: 'portrait' | 'landscape' | 'square';
+  furry: boolean;
+  base: { subjects: string; style: string; composition: string; scene: string; other: string };
+  characters: { prompt: string; x: number; y: number }[];
+  negative: string;
+  text: string;
+}
+
+const DECOMPOSE_PROMPT = `You are a NovelAI Diffusion V4.5/V5 prompt engineer. Break this image down into the fields of NovelAI's image generation form so that it can be re-created.
+Use Danbooru tags: lowercase, spaces instead of underscores, comma-separated. Never invent artist names. Do not add quality tags (masterpiece, best quality, very aesthetic, no text) — the app adds those.
+Return ONLY JSON with this shape:
+{
+  "orientation": "portrait" | "landscape" | "square",
+  "furry": boolean,                 // true only if the main subjects are anthro/furry characters
+  "base": {
+    "subjects": "",                 // subject count tags ONLY, e.g. "1girl", "1boy, 1girl", "2girls", "no humans"
+    "style": "",                    // medium and art style: line weight, shading, coloring, e.g. "thick lines, flat color, cel shading, digital art"
+    "composition": "",              // framing and camera: "cowboy shot", "full body", "from above", "straight-on", "dutch angle", "looking at viewer" if shared by all
+    "scene": "",                    // background / location / lighting / weather / time / mood, e.g. "school, classroom, window, sunlight". Use "location" if a non-specific background is visible, "simple background, white background" if plain
+    "other": ""                     // relationship or whole-scene tags (couple, matching outfits), era as "year 20XX" only if obvious, and one rating tag: rating:general / rating:sensitive / rating:questionable / rating:explicit
+  },
+  "characters": [                   // one entry per visible person/creature, left to right; empty for scenery
+    { "prompt": "", "x": 0.5, "y": 0.5 }
+    // prompt starts with "girl", "boy" or "other" (no numbers), then: species if non-human, hair, eyes, body, outfit, accessories, expression, pose, action.
+    // For actions between characters, prefix the action tag: "source#" for the one doing it, "target#" for the one receiving it, "mutual#" for both (e.g. "source#princess carry" and "target#princess carry", "mutual#hug").
+    // x, y = centre of that character in the image, 0 to 1 (x left→right, y top→bottom).
+  ],
+  "negative": "",                   // a few tags for things that should clearly be avoided to keep this look (e.g. "realistic, 3d" for a flat anime image); may be empty
+  "text": ""                        // readable text written in the image, verbatim, else ""
+}`;
+
+const clamp01 = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.5);
+const cleanTags = (v: unknown) => (typeof v === 'string' ? v : '').replace(/_/g, ' ').replace(/\s*\n\s*/g, ', ').replace(/\s+,/g, ',').trim();
+
+export const decomposeImageForNovelAI = async (image: string, signal?: AbortSignal): Promise<NaiDecomposition> => {
+  const ai = getAIClient();
+  let lastError: any = null;
+  for (const model of [GeminiModel.FLASH_LATEST, GeminiModel.FLASH_3_8, GeminiModel.FLASH_LITE_LATEST] as string[]) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [toInlinePart(image, '要拆解的圖'), { text: DECOMPOSE_PROMPT }] }],
+        config: { temperature: 0.2, abortSignal: signal, safetySettings: SAFETY_SETTINGS, responseMimeType: 'application/json' },
+      });
+      const blockReason = getBlockReason(response);
+      const out = (response.text || '').trim();
+      let json: any = null;
+      try {
+        json = JSON.parse(out.replace(/^```(json)?|```$/g, ''));
+      } catch { /* 不是 JSON */ }
+      if (blockReason || !json || typeof json !== 'object') {
+        recordModerationOutcome(model, true, blockReason ? 'blocked' : out ? 'refused' : 'empty', blockReason);
+        throw new Error(`圖片拆解沒有結果（${model}${blockReason ? `，${blockReason}` : ''}），可以換一張圖或手動填寫。`);
+      }
+      recordModerationOutcome(model, true, 'ok');
+      const base = json.base ?? {};
+      return {
+        orientation: ['portrait', 'landscape', 'square'].includes(json.orientation) ? json.orientation : 'portrait',
+        furry: json.furry === true,
+        base: {
+          subjects: cleanTags(base.subjects),
+          style: cleanTags(base.style),
+          composition: cleanTags(base.composition),
+          scene: cleanTags(base.scene),
+          other: cleanTags(base.other),
+        },
+        characters: (Array.isArray(json.characters) ? json.characters : [])
+          .map((c: any) => ({ prompt: cleanTags(c?.prompt), x: clamp01(c?.x), y: clamp01(c?.y) }))
+          .filter((c: { prompt: string }) => c.prompt),
+        negative: cleanTags(json.negative),
+        text: typeof json.text === 'string' ? json.text.trim() : '',
+      };
+    } catch (err: any) {
+      if (signal?.aborted || isAbortError(err)) throw new Error('GenerationCancelled');
+      lastError = err;
+      if (isTemporaryModelError(err)) {
+        await wait(600, signal);
+        continue;
+      }
+      throw err.message?.startsWith('圖片拆解') ? err : toFriendlyError(err);
+    }
+  }
+  throw toFriendlyError(lastError);
+};
