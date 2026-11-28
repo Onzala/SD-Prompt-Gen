@@ -14,6 +14,7 @@ import HistorySidebar from './components/HistorySidebar';
 import ApiKeyModal from './components/ApiKeyModal';
 import ModerationStatsModal from './components/ModerationStatsModal';
 import PoseWearLibrary from './components/PoseWearLibrary';
+import PoseEditor from './components/PoseEditor';
 import { preparePoseWearReference, type SelectedPoseWearReference } from './services/posewear';
 import { useTheme } from './hooks/useTheme';
 
@@ -415,6 +416,17 @@ const App: React.FC = () => {
               />
             </div>
           </section>
+
+          {/* 4. 姿勢調整（實驗）：直接用 Gemini 圖片模型產圖 */}
+          <PoseEditor
+            hasApiKey={!!apiKey}
+            onNeedApiKey={() => setIsApiKeyOpen(true)}
+            showAdult={showAdultReferences}
+            onShowAdultChange={enabled => {
+              setShowAdultReferences(enabled);
+              if (!enabled) setPoseWearReferences(current => current.filter(entry => !entry.reference.adult));
+            }}
+          />
         </div>
 
         {/* 右欄：結果 */}

@@ -13,9 +13,13 @@ interface Props {
   showAdult: boolean;
   onShowAdultChange: (enabled: boolean) => void;
   disabled: boolean;
+  /** 只顯示這些類型（預設全部） */
+  groups?: PoseWearGroup[];
+  label?: string;
+  hint?: string;
 }
 
-const groups: PoseWearGroup[] = ['姿勢', '服裝', '表情', '髮型'];
+const allGroups: PoseWearGroup[] = ['姿勢', '服裝', '表情', '髮型'];
 const collections = Object.keys(poseWearCollections) as PoseWearCollection[];
 const pageSize = 16;
 
@@ -69,11 +73,14 @@ function CatalogCard({ item, alternate, disabled, onSelect }: {
   );
 }
 
-export default function PoseWearLibrary({ selected, onChange, showAdult, onShowAdultChange, disabled }: Props) {
+export default function PoseWearLibrary({
+  selected, onChange, showAdult, onShowAdultChange, disabled,
+  groups = allGroups, label = '參考素材庫', hint = '姿勢、服裝、表情、髮型',
+}: Props) {
   const [items, setItems] = useState<PoseWearItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const [group, setGroup] = useState<PoseWearGroup>('姿勢');
+  const [group, setGroup] = useState<PoseWearGroup>(groups[0]);
   const [collection, setCollection] = useState<PoseWearCollection | ''>('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -128,7 +135,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
   return (
     <section aria-label="參考素材庫">
       <div className="field-label">
-        <span>參考素材庫</span>
+        <span>{label}</span>
         {selected.length > 0 && <span className="text-violet-300">已選 {selected.length} 項</span>}
       </div>
       <button
@@ -139,7 +146,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
         className="flex h-11 w-full items-center gap-2.5 rounded-xl border border-fg/[0.08] bg-slate-950/50 px-3 text-left transition-all hover:border-fg/15 hover:bg-fg/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Images size={16} className="shrink-0 text-violet-400" />
-        <span className="min-w-0 flex-1 truncate text-sm text-slate-400">姿勢、服裝、表情、髮型</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-slate-400">{hint}</span>
         <ChevronRight size={16} className="shrink-0 text-slate-400" />
       </button>
       {isOpen && createPortal(
@@ -157,7 +164,7 @@ export default function PoseWearLibrary({ selected, onChange, showAdult, onShowA
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap gap-1.5" aria-label="素材類型">
-              {groups.map(option => (
+              {groups.length > 1 && groups.map(option => (
                 <button key={option} type="button" aria-pressed={group === option}
                   onClick={() => { setGroup(option); setCollection(''); setPage(0); }}
                   className={`rounded-md border px-2.5 py-1 text-xs ${group === option ? 'border-violet-500/50 bg-violet-500/20 text-violet-200' : 'border-fg/[0.08] text-slate-400 hover:text-fg'}`}>

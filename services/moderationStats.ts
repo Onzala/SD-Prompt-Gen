@@ -57,7 +57,7 @@ export const recordModerationOutcome = (
 };
 
 // API 層級的攔截原因（RECITATION 是著作權重複，不算審查）
-const BLOCK_FINISH_REASONS = ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'IMAGE_SAFETY'];
+const BLOCK_FINISH_REASONS = ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'IMAGE_SAFETY', 'IMAGE_PROHIBITED_CONTENT'];
 
 export const getBlockReason = (response: any): string | undefined => {
   const promptBlock = response?.promptFeedback?.blockReason;

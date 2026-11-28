@@ -32,7 +32,7 @@ export const setStoredApiKey = (key: string) => {
   }
 };
 
-const getAIClient = () => {
+export const getAIClient = () => {
   const apiKey = getStoredApiKey();
   if (!apiKey) {
     throw new Error('尚未設定 Gemini API 金鑰。請點擊右上角「API 金鑰」輸入您的金鑰。');
@@ -41,7 +41,7 @@ const getAIClient = () => {
 };
 
 // Helper to check if error is a temporary surge/503/429 condition
-const isTemporaryModelError = (error: any): boolean => {
+export const isTemporaryModelError = (error: any): boolean => {
   if (!error) return false;
   const msg = typeof error === 'string'
     ? error
@@ -66,11 +66,11 @@ const isTemporaryModelError = (error: any): boolean => {
   );
 };
 
-const isAbortError = (error: any) =>
+export const isAbortError = (error: any) =>
   error?.name === 'AbortError' || error?.message === 'AbortError' || /aborted/i.test(error?.message || '');
 
 // 可被 AbortSignal 中斷的等待
-const wait = (ms: number, signal?: AbortSignal) =>
+export const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) return reject(new Error('GenerationCancelled'));
     const t = setTimeout(resolve, ms);
@@ -98,7 +98,7 @@ const getCandidateModels = (requestedModel: string): string[] => {
   return list;
 };
 
-const toFriendlyError = (error: any): Error => {
+export const toFriendlyError = (error: any): Error => {
   let userFriendlyMsg = error?.message || '生成提示詞失敗';
   try {
     const parsed = JSON.parse(userFriendlyMsg);
